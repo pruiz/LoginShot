@@ -5,11 +5,11 @@ import XCTest
 @MainActor
 final class AppDelegateTests: XCTestCase {
 
-    private var mockCaptureService: MockCaptureService!
-    private var mockStorageWriter: MockStorageWriter!
-    private var mockConfigLoader: MockConfigLoader!
-    private var mockUnlockObserver: MockUnlockObserver!
-    private var mockDateProvider: MockDateProvider!
+    nonisolated(unsafe) private var mockCaptureService: MockCaptureService!
+    nonisolated(unsafe) private var mockStorageWriter: MockStorageWriter!
+    nonisolated(unsafe) private var mockConfigLoader: MockConfigLoader!
+    nonisolated(unsafe) private var mockUnlockObserver: MockUnlockObserver!
+    nonisolated(unsafe) private var mockDateProvider: MockDateProvider!
 
     override func setUp() {
         super.setUp()
