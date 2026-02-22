@@ -83,6 +83,7 @@ Agents may scaffold this structure as needed.
   - `Capture now`
   - `Open output folder`
   - `Reload config`
+  - `Generate sample config`
   - `Quit`
 
 ## Build / Lint / Test Commands (keep updated)
@@ -257,6 +258,11 @@ None present at time of writing. If `.cursorrules`, `.cursor/rules/`, or `.githu
 
 - Camera permission (TCC) is tied to app identity and bundle execution.
 - Unlock/session notifications vary across macOS versions; use layered observers if needed.
+- Test runs bypass production app startup side effects: `main.swift` detects XCTest via
+  `XCTestConfigurationFilePath` and does not create `AppDelegate` in tests.
+- Running from terminal may print `objc: class NSKVONotifying_AVCapturePhotoOutput not linked into application`.
+  This appears to be Apple runtime/framework noise and is cosmetic; captures still work.
+  Keep `AVCapturePhotoOutput` for still-image quality unless product requirements change.
 - Keep behavior transparent and auditable.
 
 ## Out of Scope (v1), possible future
