@@ -42,10 +42,12 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
    - macOS will request Camera permission.
    - Grant it when prompted.
 
-4. Create a config file (see Configuration below).
+4. (Optional) Create a config file (see Configuration below).
+   LoginShot runs with sensible defaults if no config file is present — images are saved to `~/Pictures/LoginShot/`.
+   You can also generate a sample config from the menu bar (see Menu Bar below).
 
 5. Enable autostart on login:
-   - **Planned for v1:** a LaunchAgent plist installer in this repo.
+   - **Planned for v1.1:** a LaunchAgent plist installer in this repo.
    - During development, you can run from Xcode or manually launch the built app.
 
 ## Configuration (YAML)
@@ -54,6 +56,14 @@ LoginShot reads configuration from (first found wins):
 
 1. `~/.config/LoginShot/config.yml`
 2. `~/Library/Application Support/LoginShot/config.yml`
+
+If no config file is found, LoginShot uses these defaults:
+- **Output directory:** `~/Pictures/LoginShot/`
+- **Format:** `jpg` (1280px max width, 0.85 quality)
+- **Triggers:** both `session-open` and `unlock` enabled
+- **Metadata:** JSON sidecar enabled
+- **Menu bar icon:** enabled
+- **Debounce:** 3 seconds
 
 ### YAML example
 ```yaml
@@ -74,7 +84,7 @@ ui:
   menuBarIcon: true      # can be disabled for headless mode
 
 capture:
-  silent: true           # suppress simulated shutter sound
+  silent: true           # no effect in v1 (macOS has no shutter sound); reserved for future use
   debounceSeconds: 3
 ```
 
@@ -82,8 +92,9 @@ capture:
 
 Images are saved with a timestamp and event tag:
 
-- `2026-02-22T00-15-03-session-open.jpg`
-- `2026-02-22T08-41-10-unlock.jpg`
+- `2026-02-22T00-15-03-session-open.jpg` — captured at login
+- `2026-02-22T08-41-10-unlock.jpg` — captured on session unlock
+- `2026-02-22T14-30-00-manual.jpg` — captured via "Capture Now" menu action
 
 If enabled, a sidecar metadata JSON is also written:
 
@@ -109,6 +120,20 @@ If enabled, a sidecar metadata JSON is also written:
 }
 ```
 
+## Menu Bar
+
+When `ui.menuBarIcon` is `true` (the default), LoginShot shows a camera icon in the macOS menu bar with these actions:
+
+| Menu item | Description |
+|-----------|-------------|
+| **Capture Now** | Take a snapshot immediately (tagged as `manual` event) |
+| **Open Output Folder** | Reveal the output directory in Finder |
+| **Reload Config** | Re-read the YAML config file without restarting |
+| **Generate Sample Config** | Write a commented `config.yml` to `~/Library/Application Support/LoginShot/` (will not overwrite an existing file) |
+| **Quit** | Shut down LoginShot |
+
+Set `ui.menuBarIcon: false` in config for fully headless operation. Changing this setting requires an app restart to take effect.
+
 ## Troubleshooting
 - **No camera prompt / capture fails**
   - System Settings → Privacy & Security → Camera → enable LoginShot.
@@ -118,8 +143,8 @@ If enabled, a sidecar metadata JSON is also written:
   - Prefer the real local sync path (e.g. `~/Library/CloudStorage/...`) over symlinks.
 
 ## Roadmap
-- v1: local snapshots (session-open + unlock), YAML config, sidecar JSON metadata, optional menu bar icon
-- v1.1: LaunchAgent installer script + sample config generator
+- v1: local snapshots (session-open + unlock), YAML config, sidecar JSON metadata, optional menu bar icon, sample config generator
+- v1.1: LaunchAgent installer script
 - v2: optional Dropbox/Drive API upload
 - v3: optional collector service
 - v4: optional face verification + alerting

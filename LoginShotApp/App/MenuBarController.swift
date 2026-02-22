@@ -8,16 +8,19 @@ final class MenuBarController: NSObject {
     private var statusItem: NSStatusItem?
     private let onCaptureNow: @MainActor () -> Void
     private let onReloadConfig: @MainActor () -> Void
+    private let onGenerateConfig: @MainActor () -> Void
     private let outputDirectory: String
 
     init(
         outputDirectory: String,
         onCaptureNow: @escaping @MainActor () -> Void,
-        onReloadConfig: @escaping @MainActor () -> Void
+        onReloadConfig: @escaping @MainActor () -> Void,
+        onGenerateConfig: @escaping @MainActor () -> Void
     ) {
         self.outputDirectory = outputDirectory
         self.onCaptureNow = onCaptureNow
         self.onReloadConfig = onReloadConfig
+        self.onGenerateConfig = onGenerateConfig
         super.init()
     }
 
@@ -60,6 +63,14 @@ final class MenuBarController: NSObject {
         reloadItem.target = self
         menu.addItem(reloadItem)
 
+        let generateItem = NSMenuItem(
+            title: "Generate Sample Config",
+            action: #selector(generateConfigAction(_:)),
+            keyEquivalent: ""
+        )
+        generateItem.target = self
+        menu.addItem(generateItem)
+
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
@@ -101,6 +112,11 @@ final class MenuBarController: NSObject {
     @objc private func reloadConfigAction(_ sender: Any?) {
         Log.ui.info("Menu: Reload Config")
         onReloadConfig()
+    }
+
+    @objc private func generateConfigAction(_ sender: Any?) {
+        Log.ui.info("Menu: Generate Sample Config")
+        onGenerateConfig()
     }
 
     @objc private func quitAction(_ sender: Any?) {
