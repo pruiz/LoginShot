@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag (strict semver, e.g. v1.2.3)'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DERIVED_DATA_PATH: build/DerivedData
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine release tag
+        id: tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: tag '${TAG}' is not strict semver (expected vMAJOR.MINOR.PATCH)." >&2
+            exit 1
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build release
+        run: xcodebuild -scheme LoginShot -configuration Release -destination 'platform=macOS' -derivedDataPath "$DERIVED_DATA_PATH" build
+
+      - name: Package app
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          APP_PATH="$DERIVED_DATA_PATH/Build/Products/Release/LoginShot.app"
+          ZIP_NAME="LoginShot-macos-${TAG}.zip"
+
+          if [[ ! -d "$APP_PATH" ]]; then
+            echo "Error: app not found at $APP_PATH" >&2
+            exit 1
+          fi
+
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_NAME"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          ZIP_NAME="${{ steps.package.outputs.zip_name }}"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP_NAME" --clobber
+          else
+            gh release create "$TAG" "$ZIP_NAME" \
+              --title "$TAG" \
+              --notes "Unsigned macOS build for development/testing.\n\nThis artifact is not code-signed or notarized." \
+              --target "$GITHUB_SHA"
+          fi

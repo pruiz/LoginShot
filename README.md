@@ -1,5 +1,7 @@
 # LoginShot
 
+[![CI](https://github.com/pruiz/LoginShot/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/pruiz/LoginShot/actions/workflows/ci.yml)
+
 LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login) and when the session is **unlocked**, then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine.
 
 > **Privacy notice**
@@ -27,6 +29,35 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
 - macOS 13+ recommended
 - Xcode 15+ recommended
 - Camera permission granted to the app (macOS will prompt at first run)
+
+## CI
+
+GitHub Actions runs on every pull request and push to `master`:
+
+- `xcodebuild -scheme LoginShot -configuration Debug -destination 'platform=macOS' build`
+- `xcodebuild -scheme LoginShot -destination 'platform=macOS' test`
+
+Workflow file: `.github/workflows/ci.yml`
+
+## Release (unsigned)
+
+LoginShot publishes unsigned macOS release artifacts via GitHub Actions.
+
+1. Create a strict semver tag:
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+2. GitHub Actions builds `Release` and uploads `LoginShot-macos-v1.2.3.zip` to the GitHub Release.
+
+You can also run the release workflow manually from GitHub UI and provide `version` (for example, `v1.2.3`).
+
+Important:
+
+- Only strict semver tags are accepted (`vMAJOR.MINOR.PATCH`).
+- Artifacts are unsigned and not notarized (developer/testing use).
+
+Workflow file: `.github/workflows/release.yml`
 
 ## Installation (developer mode)
 
@@ -188,7 +219,7 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
 
 ## Roadmap
 - v1: local snapshots (session-open + unlock), YAML config, sidecar JSON metadata, optional menu bar icon, sample config generator
-- v1.1: LaunchAgent installer script
+- v1.1: LaunchAgent installer script (completed)
 - v2: optional Dropbox/Drive API upload
 - v3: optional collector service
 - v4: optional face verification + alerting
