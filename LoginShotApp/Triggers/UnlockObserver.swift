@@ -1,6 +1,17 @@
 import AppKit
 import Foundation
 
+// MARK: - UnlockObserving Protocol
+
+/// Protocol for unlock observation (test seam).
+@MainActor
+protocol UnlockObserving: AnyObject {
+    func start(debounceSeconds: Int, handler: @escaping @MainActor (CaptureEvent) -> Void)
+    func stop()
+}
+
+// MARK: - UnlockObserver Implementation
+
 /// Observes user session unlock / screen-wake events and fires a capture callback.
 /// Uses layered notification sources for robustness across macOS versions:
 ///   - NSWorkspace.screensDidWakeNotification
@@ -9,7 +20,7 @@ import Foundation
 ///
 /// Debounces repeated signals so only one capture fires per unlock cycle.
 @MainActor
-final class UnlockObserver {
+final class UnlockObserver: UnlockObserving {
 
     private var handler: (@MainActor (CaptureEvent) -> Void)?
     private var isRunning = false

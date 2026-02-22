@@ -22,6 +22,7 @@
 		BB000000000000000000000D /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = AE0000000000000000000001 /* Yams */; };
 		BB000000000000000000000E /* Debouncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000F /* Debouncer.swift */; };
 		BB0000000000000000000010 /* ConfigWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000010 /* ConfigWriter.swift */; };
+		BB0000000000000000000011 /* Clock.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000011 /* Clock.swift */; };
 		BB0000000000000000000021 /* AppConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000021 /* AppConfigTests.swift */; };
 		BB0000000000000000000022 /* ConfigLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000022 /* ConfigLoaderTests.swift */; };
 		BB0000000000000000000023 /* FilenameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000023 /* FilenameTests.swift */; };
@@ -29,6 +30,14 @@
 		BB0000000000000000000025 /* CaptureMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000025 /* CaptureMetadataTests.swift */; };
 		BB0000000000000000000026 /* StorageWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000026 /* StorageWriterTests.swift */; };
 		BB0000000000000000000027 /* ConfigWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000027 /* ConfigWriterTests.swift */; };
+		BB0000000000000000000028 /* AppDelegateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000028 /* AppDelegateTests.swift */; };
+		BB0000000000000000000029 /* DebouncerDeterministicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000029 /* DebouncerDeterministicTests.swift */; };
+		BB000000000000000000002A /* UnlockObserverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002A /* UnlockObserverTests.swift */; };
+		BB000000000000000000002B /* MockCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002B /* MockCaptureService.swift */; };
+		BB000000000000000000002C /* MockStorageWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002C /* MockStorageWriter.swift */; };
+		BB000000000000000000002D /* MockClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002D /* MockClock.swift */; };
+		BB000000000000000000002E /* MockConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002E /* MockConfigLoader.swift */; };
+		BB000000000000000000002F /* MockUnlockObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002F /* MockUnlockObserver.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +75,15 @@
 		FF0000000000000000000025 /* CaptureMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureMetadataTests.swift; sourceTree = "<group>"; };
 		FF0000000000000000000026 /* StorageWriterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageWriterTests.swift; sourceTree = "<group>"; };
 		FF0000000000000000000027 /* ConfigWriterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigWriterTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000011 /* Clock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clock.swift; sourceTree = "<group>"; };
+		FF0000000000000000000028 /* AppDelegateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegateTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000029 /* DebouncerDeterministicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebouncerDeterministicTests.swift; sourceTree = "<group>"; };
+		FF000000000000000000002A /* UnlockObserverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockObserverTests.swift; sourceTree = "<group>"; };
+		FF000000000000000000002B /* MockCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockCaptureService.swift; sourceTree = "<group>"; };
+		FF000000000000000000002C /* MockStorageWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStorageWriter.swift; sourceTree = "<group>"; };
+		FF000000000000000000002D /* MockClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockClock.swift; sourceTree = "<group>"; };
+		FF000000000000000000002E /* MockConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockConfigLoader.swift; sourceTree = "<group>"; };
+		FF000000000000000000002F /* MockUnlockObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockUnlockObserver.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +179,7 @@
 		AA0000000000000000000008 /* Util */ = {
 			isa = PBXGroup;
 			children = (
+				FF0000000000000000000011 /* Clock.swift */,
 				FF000000000000000000000F /* Debouncer.swift */,
 				FF000000000000000000000C /* Logging.swift */,
 			);
@@ -187,14 +206,30 @@
 			isa = PBXGroup;
 			children = (
 				FF0000000000000000000021 /* AppConfigTests.swift */,
-				FF0000000000000000000022 /* ConfigLoaderTests.swift */,
-				FF0000000000000000000023 /* FilenameTests.swift */,
-				FF0000000000000000000024 /* DebouncerTests.swift */,
+				FF0000000000000000000028 /* AppDelegateTests.swift */,
 				FF0000000000000000000025 /* CaptureMetadataTests.swift */,
-				FF0000000000000000000026 /* StorageWriterTests.swift */,
+				FF0000000000000000000022 /* ConfigLoaderTests.swift */,
 				FF0000000000000000000027 /* ConfigWriterTests.swift */,
+				FF0000000000000000000029 /* DebouncerDeterministicTests.swift */,
+				FF0000000000000000000024 /* DebouncerTests.swift */,
+				FF0000000000000000000023 /* FilenameTests.swift */,
+				FF0000000000000000000026 /* StorageWriterTests.swift */,
+				FF000000000000000000002A /* UnlockObserverTests.swift */,
+				AA000000000000000000000C /* Mocks */,
 			);
 			path = LoginShotTests;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000000C /* Mocks */ = {
+			isa = PBXGroup;
+			children = (
+				FF000000000000000000002B /* MockCaptureService.swift */,
+				FF000000000000000000002D /* MockClock.swift */,
+				FF000000000000000000002E /* MockConfigLoader.swift */,
+				FF000000000000000000002C /* MockStorageWriter.swift */,
+				FF000000000000000000002F /* MockUnlockObserver.swift */,
+			);
+			path = Mocks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -297,6 +332,7 @@
 				BB000000000000000000000C /* Logging.swift in Sources */,
 				BB000000000000000000000E /* Debouncer.swift in Sources */,
 				BB0000000000000000000010 /* ConfigWriter.swift in Sources */,
+				BB0000000000000000000011 /* Clock.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -311,6 +347,14 @@
 				BB0000000000000000000025 /* CaptureMetadataTests.swift in Sources */,
 				BB0000000000000000000026 /* StorageWriterTests.swift in Sources */,
 				BB0000000000000000000027 /* ConfigWriterTests.swift in Sources */,
+				BB0000000000000000000028 /* AppDelegateTests.swift in Sources */,
+				BB0000000000000000000029 /* DebouncerDeterministicTests.swift in Sources */,
+				BB000000000000000000002A /* UnlockObserverTests.swift in Sources */,
+				BB000000000000000000002B /* MockCaptureService.swift in Sources */,
+				BB000000000000000000002C /* MockStorageWriter.swift in Sources */,
+				BB000000000000000000002D /* MockClock.swift in Sources */,
+				BB000000000000000000002E /* MockConfigLoader.swift in Sources */,
+				BB000000000000000000002F /* MockUnlockObserver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

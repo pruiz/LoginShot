@@ -1,6 +1,22 @@
 import Foundation
 import Yams
 
+// MARK: - ConfigLoader Protocol
+
+/// Protocol for loading configuration (test seam).
+protocol ConfigLoaderProtocol: Sendable {
+    func load() -> AppConfig
+}
+
+/// Default implementation that wraps the static ConfigLoader methods.
+struct ConfigLoaderImpl: ConfigLoaderProtocol, Sendable {
+    func load() -> AppConfig {
+        ConfigLoader.load()
+    }
+}
+
+// MARK: - ConfigLoader Implementation
+
 /// Loads and parses the YAML configuration file.
 enum ConfigLoader {
 
