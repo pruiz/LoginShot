@@ -21,7 +21,24 @@
 		BB000000000000000000000C /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000C /* Logging.swift */; };
 		BB000000000000000000000D /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = AE0000000000000000000001 /* Yams */; };
 		BB000000000000000000000E /* Debouncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000F /* Debouncer.swift */; };
+		BB0000000000000000000010 /* ConfigWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000010 /* ConfigWriter.swift */; };
+		BB0000000000000000000021 /* AppConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000021 /* AppConfigTests.swift */; };
+		BB0000000000000000000022 /* ConfigLoaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000022 /* ConfigLoaderTests.swift */; };
+		BB0000000000000000000023 /* FilenameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000023 /* FilenameTests.swift */; };
+		BB0000000000000000000024 /* DebouncerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000024 /* DebouncerTests.swift */; };
+		BB0000000000000000000025 /* CaptureMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000025 /* CaptureMetadataTests.swift */; };
+		BB0000000000000000000026 /* StorageWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000026 /* StorageWriterTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DD0000000000000000000010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = EE0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD0000000000000000000001;
+			remoteInfo = LoginShot;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		FF0000000000000000000001 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -39,6 +56,14 @@
 		FF000000000000000000000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FF000000000000000000000E /* LoginShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LoginShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF000000000000000000000F /* Debouncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debouncer.swift; sourceTree = "<group>"; };
+		FF0000000000000000000010 /* ConfigWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigWriter.swift; sourceTree = "<group>"; };
+		FF0000000000000000000020 /* LoginShotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LoginShotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF0000000000000000000021 /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000022 /* ConfigLoaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoaderTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000023 /* FilenameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilenameTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000024 /* DebouncerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebouncerTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000025 /* CaptureMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureMetadataTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000026 /* StorageWriterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageWriterTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +75,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CC0000000000000000000012 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -57,6 +89,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000002 /* LoginShotApp */,
+				AA000000000000000000000B /* LoginShotTests */,
 				AA0000000000000000000009 /* Products */,
 				AA000000000000000000000A /* Frameworks */,
 			);
@@ -100,6 +133,7 @@
 			children = (
 				FF0000000000000000000006 /* AppConfig.swift */,
 				FF0000000000000000000007 /* ConfigLoader.swift */,
+				FF0000000000000000000010 /* ConfigWriter.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -135,6 +169,7 @@
 			isa = PBXGroup;
 			children = (
 				FF000000000000000000000E /* LoginShot.app */,
+				FF0000000000000000000020 /* LoginShotTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -144,6 +179,19 @@
 			children = (
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000000B /* LoginShotTests */ = {
+			isa = PBXGroup;
+			children = (
+				FF0000000000000000000021 /* AppConfigTests.swift */,
+				FF0000000000000000000022 /* ConfigLoaderTests.swift */,
+				FF0000000000000000000023 /* FilenameTests.swift */,
+				FF0000000000000000000024 /* DebouncerTests.swift */,
+				FF0000000000000000000025 /* CaptureMetadataTests.swift */,
+				FF0000000000000000000026 /* StorageWriterTests.swift */,
+			);
+			path = LoginShotTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -168,6 +216,23 @@
 			productName = LoginShot;
 			productReference = FF000000000000000000000E /* LoginShot.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DD0000000000000000000002 /* LoginShotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC0000000000000000000003 /* Build configuration list for PBXNativeTarget "LoginShotTests" */;
+			buildPhases = (
+				CC0000000000000000000011 /* Sources */,
+				CC0000000000000000000012 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DD0000000000000000000011 /* PBXTargetDependency */,
+			);
+			name = LoginShotTests;
+			productName = LoginShotTests;
+			productReference = FF0000000000000000000020 /* LoginShotTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -195,6 +260,7 @@
 			projectRoot = "";
 			targets = (
 				DD0000000000000000000001 /* LoginShot */,
+				DD0000000000000000000002 /* LoginShotTests */,
 			);
 		};
 /* End PBXProject section */
@@ -227,10 +293,32 @@
 				BB000000000000000000000B /* UnlockObserver.swift in Sources */,
 				BB000000000000000000000C /* Logging.swift in Sources */,
 				BB000000000000000000000E /* Debouncer.swift in Sources */,
+				BB0000000000000000000010 /* ConfigWriter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC0000000000000000000011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000021 /* AppConfigTests.swift in Sources */,
+				BB0000000000000000000022 /* ConfigLoaderTests.swift in Sources */,
+				BB0000000000000000000023 /* FilenameTests.swift in Sources */,
+				BB0000000000000000000024 /* DebouncerTests.swift in Sources */,
+				BB0000000000000000000025 /* CaptureMetadataTests.swift in Sources */,
+				BB0000000000000000000026 /* StorageWriterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DD0000000000000000000011 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD0000000000000000000001 /* LoginShot */;
+			targetProxy = DD0000000000000000000010 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AB0000000000000000000001 /* Debug */ = {
@@ -377,6 +465,34 @@
 			};
 			name = Release;
 		};
+	AB0000000000000000000005 /* Debug */ = {
+		isa = XCBuildConfiguration;
+		buildSettings = {
+			BUNDLE_LOADER = "$(TEST_HOST)";
+			CODE_SIGN_IDENTITY = "-";
+			CODE_SIGN_STYLE = Automatic;
+			GENERATE_INFOPLIST_FILE = YES;
+			PRODUCT_BUNDLE_IDENTIFIER = dev.pruiz.LoginShotTests;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SWIFT_EMIT_LOC_STRINGS = NO;
+			TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LoginShot.app/Contents/MacOS/LoginShot";
+		};
+		name = Debug;
+	};
+	AB0000000000000000000006 /* Release */ = {
+		isa = XCBuildConfiguration;
+		buildSettings = {
+			BUNDLE_LOADER = "$(TEST_HOST)";
+			CODE_SIGN_IDENTITY = "-";
+			CODE_SIGN_STYLE = Automatic;
+			GENERATE_INFOPLIST_FILE = YES;
+			PRODUCT_BUNDLE_IDENTIFIER = dev.pruiz.LoginShotTests;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SWIFT_EMIT_LOC_STRINGS = NO;
+			TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LoginShot.app/Contents/MacOS/LoginShot";
+		};
+		name = Release;
+	};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -394,6 +510,15 @@
 			buildConfigurations = (
 				AB0000000000000000000003 /* Debug */,
 				AB0000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC0000000000000000000003 /* Build configuration list for PBXNativeTarget "LoginShotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000000000000000000005 /* Debug */,
+				AB0000000000000000000006 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

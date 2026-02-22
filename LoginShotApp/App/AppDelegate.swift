@@ -99,6 +99,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func generateSampleConfig() {
+        do {
+            let path = try ConfigWriter.writeSampleConfig()
+            Log.app.info("Sample config written to \(path)")
+
+            // Reveal in Finder
+            let url = URL(fileURLWithPath: path)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch ConfigWriterError.fileAlreadyExists(let path) {
+            Log.app.warning("Config file already exists at \(path); not overwriting")
+            // Still reveal the existing file
+            let url = URL(fileURLWithPath: path)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            Log.app.error("Failed to generate sample config: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Menu Bar
 
     private func setupMenuBar() {
@@ -109,6 +127,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onReloadConfig: { [weak self] in
                 self?.reloadConfig()
+            },
+            onGenerateConfig: { [weak self] in
+                self?.generateSampleConfig()
             }
         )
         controller.setup()

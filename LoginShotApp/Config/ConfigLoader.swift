@@ -38,32 +38,11 @@ enum ConfigLoader {
         }
     }
 
-    // MARK: - Private
-
-    private static func firstExistingPath() -> String? {
-        for path in searchPaths {
-            if FileManager.default.fileExists(atPath: path) {
-                return path
-            }
-        }
-        return nil
-    }
-
-    private static func ensureAppSupportDirectory() {
-        let fm = FileManager.default
-        let dir = appSupportDirectory
-        if !fm.fileExists(atPath: dir) {
-            do {
-                try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
-                Log.config.info("Created config directory: \(dir)")
-            } catch {
-                Log.config.warning("Could not create config directory \(dir): \(error.localizedDescription)")
-            }
-        }
-    }
+    // MARK: - Internal (for testing)
 
     /// Parse YAML string into AppConfig, using defaults for missing keys.
-    private static func parse(yaml: String) throws -> AppConfig {
+    /// Internal access for unit testing via @testable import.
+    static func parse(yaml: String) throws -> AppConfig {
         guard let root = try Yams.load(yaml: yaml) as? [String: Any] else {
             Log.config.warning("Config YAML is not a dictionary; using defaults")
             return AppConfig.default
@@ -107,6 +86,30 @@ enum ConfigLoader {
             ui: ui,
             capture: capture
         )
+    }
+
+    // MARK: - Private
+
+    private static func firstExistingPath() -> String? {
+        for path in searchPaths {
+            if FileManager.default.fileExists(atPath: path) {
+                return path
+            }
+        }
+        return nil
+    }
+
+    private static func ensureAppSupportDirectory() {
+        let fm = FileManager.default
+        let dir = appSupportDirectory
+        if !fm.fileExists(atPath: dir) {
+            do {
+                try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+                Log.config.info("Created config directory: \(dir)")
+            } catch {
+                Log.config.warning("Could not create config directory \(dir): \(error.localizedDescription)")
+            }
+        }
     }
 
     /// Expand "~" prefix to the user's home directory.
