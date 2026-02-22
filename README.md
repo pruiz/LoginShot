@@ -139,6 +139,10 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
   - System Settings → Privacy & Security → Camera → enable LoginShot.
 - **Unlock capture doesn’t trigger**
   - Unlock signals vary by macOS version. We may combine NSWorkspace + distributed notifications to make this robust.
+- **Terminal warning at startup**
+  - You may see `objc: class NSKVONotifying_AVCapturePhotoOutput not linked into application` when launching from console.
+  - This warning is emitted by Apple runtime/framework internals and does not affect capture functionality.
+  - LoginShot intentionally keeps `AVCapturePhotoOutput` for still-photo quality.
 - **Cloud folder path**
   - Prefer the real local sync path (e.g. `~/Library/CloudStorage/...`) over symlinks.
 

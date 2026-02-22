@@ -129,17 +129,15 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             output.capturePhoto(with: settings, delegate: self)
         }
 
-        // Tear down: remove outputs/inputs before stopping.
-        // Note: The "NSKVONotifying_AVCapturePhotoOutput not linked" warning that may
-        // appear at startup is a known Apple framework issue and does not affect functionality.
-        for sessionOutput in session.outputs {
-            session.removeOutput(sessionOutput)
-        }
+        // Tear down: remove inputs/outputs before stopping to avoid
+        // "NSKVONotifying_AVCapturePhotoOutput not linked" runtime warning.
+        session.stopRunning()
         for sessionInput in session.inputs {
             session.removeInput(sessionInput)
         }
-        session.stopRunning()
-        
+        for sessionOutput in session.outputs {
+            session.removeOutput(sessionOutput)
+        }
         Log.capture.info("Capture complete (\(result.jpegData.count) bytes)")
 
         return result
