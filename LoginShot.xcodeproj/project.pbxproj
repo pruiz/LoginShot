@@ -1,0 +1,419 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BB0000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000001 /* main.swift */; };
+		BB0000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000002 /* AppDelegate.swift */; };
+		BB0000000000000000000003 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000003 /* MenuBarController.swift */; };
+		BB0000000000000000000004 /* CameraInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000004 /* CameraInfo.swift */; };
+		BB0000000000000000000005 /* CaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000005 /* CaptureService.swift */; };
+		BB0000000000000000000006 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000006 /* AppConfig.swift */; };
+		BB0000000000000000000007 /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000007 /* ConfigLoader.swift */; };
+		BB0000000000000000000008 /* CaptureMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000008 /* CaptureMetadata.swift */; };
+		BB0000000000000000000009 /* StorageWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000009 /* StorageWriter.swift */; };
+		BB000000000000000000000A /* CaptureEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000A /* CaptureEvent.swift */; };
+		BB000000000000000000000B /* UnlockObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000B /* UnlockObserver.swift */; };
+		BB000000000000000000000C /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000C /* Logging.swift */; };
+		BB000000000000000000000D /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = AE0000000000000000000001 /* Yams */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		FF0000000000000000000001 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		FF0000000000000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		FF0000000000000000000003 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		FF0000000000000000000004 /* CameraInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraInfo.swift; sourceTree = "<group>"; };
+		FF0000000000000000000005 /* CaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureService.swift; sourceTree = "<group>"; };
+		FF0000000000000000000006 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		FF0000000000000000000007 /* ConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoader.swift; sourceTree = "<group>"; };
+		FF0000000000000000000008 /* CaptureMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureMetadata.swift; sourceTree = "<group>"; };
+		FF0000000000000000000009 /* StorageWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageWriter.swift; sourceTree = "<group>"; };
+		FF000000000000000000000A /* CaptureEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEvent.swift; sourceTree = "<group>"; };
+		FF000000000000000000000B /* UnlockObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockObserver.swift; sourceTree = "<group>"; };
+		FF000000000000000000000C /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
+		FF000000000000000000000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FF000000000000000000000E /* LoginShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LoginShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CC0000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB000000000000000000000D /* Yams in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000002 /* LoginShotApp */,
+				AA0000000000000000000009 /* Products */,
+				AA000000000000000000000A /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000002 /* LoginShotApp */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000003 /* App */,
+				AA0000000000000000000004 /* Capture */,
+				AA0000000000000000000005 /* Config */,
+				AA0000000000000000000006 /* Storage */,
+				AA0000000000000000000007 /* Triggers */,
+				AA0000000000000000000008 /* Util */,
+				FF000000000000000000000D /* Info.plist */,
+			);
+			path = LoginShotApp;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				FF0000000000000000000001 /* main.swift */,
+				FF0000000000000000000002 /* AppDelegate.swift */,
+				FF0000000000000000000003 /* MenuBarController.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000004 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				FF0000000000000000000004 /* CameraInfo.swift */,
+				FF0000000000000000000005 /* CaptureService.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000005 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				FF0000000000000000000006 /* AppConfig.swift */,
+				FF0000000000000000000007 /* ConfigLoader.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000006 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				FF0000000000000000000008 /* CaptureMetadata.swift */,
+				FF0000000000000000000009 /* StorageWriter.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000007 /* Triggers */ = {
+			isa = PBXGroup;
+			children = (
+				FF000000000000000000000A /* CaptureEvent.swift */,
+				FF000000000000000000000B /* UnlockObserver.swift */,
+			);
+			path = Triggers;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000008 /* Util */ = {
+			isa = PBXGroup;
+			children = (
+				FF000000000000000000000C /* Logging.swift */,
+			);
+			path = Util;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FF000000000000000000000E /* LoginShot.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000000A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DD0000000000000000000001 /* LoginShot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC0000000000000000000002 /* Build configuration list for PBXNativeTarget "LoginShot" */;
+			buildPhases = (
+				CC0000000000000000000001 /* Sources */,
+				CC0000000000000000000002 /* Frameworks */,
+				CC0000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LoginShot;
+			packageProductDependencies = (
+				AE0000000000000000000001 /* Yams */,
+			);
+			productName = LoginShot;
+			productReference = FF000000000000000000000E /* LoginShot.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EE0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = AC0000000000000000000001 /* Build configuration list for PBXProject "LoginShot" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0000000000000000000001;
+			packageReferences = (
+				AD0000000000000000000001 /* XCRemoteSwiftPackageReference "Yams" */,
+			);
+			productRefGroup = AA0000000000000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DD0000000000000000000001 /* LoginShot */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CC0000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CC0000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000001 /* main.swift in Sources */,
+				BB0000000000000000000002 /* AppDelegate.swift in Sources */,
+				BB0000000000000000000003 /* MenuBarController.swift in Sources */,
+				BB0000000000000000000004 /* CameraInfo.swift in Sources */,
+				BB0000000000000000000005 /* CaptureService.swift in Sources */,
+				BB0000000000000000000006 /* AppConfig.swift in Sources */,
+				BB0000000000000000000007 /* ConfigLoader.swift in Sources */,
+				BB0000000000000000000008 /* CaptureMetadata.swift in Sources */,
+				BB0000000000000000000009 /* StorageWriter.swift in Sources */,
+				BB000000000000000000000A /* CaptureEvent.swift in Sources */,
+				BB000000000000000000000B /* UnlockObserver.swift in Sources */,
+				BB000000000000000000000C /* Logging.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AB0000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AB0000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AB0000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = LoginShotApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.pruiz.LoginShot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		AB0000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = LoginShotApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.pruiz.LoginShot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AC0000000000000000000001 /* Build configuration list for PBXProject "LoginShot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000000000000000000001 /* Debug */,
+				AB0000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC0000000000000000000002 /* Build configuration list for PBXNativeTarget "LoginShot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000000000000000000003 /* Debug */,
+				AB0000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AD0000000000000000000001 /* XCRemoteSwiftPackageReference "Yams" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpsim/Yams.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AE0000000000000000000001 /* Yams */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD0000000000000000000001 /* XCRemoteSwiftPackageReference "Yams" */;
+			productName = Yams;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = EE0000000000000000000001 /* Project object */;
+}
