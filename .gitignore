@@ -64,5 +64,8 @@ fastlane/test_output
 # Xcode derived data
 DerivedData/
 
+# Code coverage profiling data
+*.profraw
+
 # SPM resolved file (auto-generated)
 *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/

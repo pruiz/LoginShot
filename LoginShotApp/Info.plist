@@ -24,6 +24,8 @@
     <true/>
     <key>NSCameraUsageDescription</key>
     <string>LoginShot captures a photo when your session starts or unlocks to maintain a visual audit log.</string>
+    <key>NSCameraUseContinuityCameraDeviceType</key>
+    <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>
