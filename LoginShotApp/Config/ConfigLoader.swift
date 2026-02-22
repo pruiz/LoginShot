@@ -73,8 +73,8 @@ enum ConfigLoader {
         let output = AppConfig.OutputConfig(
             directory: expandPath(outputDict["directory"] as? String ?? "~/Pictures/LoginShot"),
             format: outputDict["format"] as? String ?? "jpg",
-            maxWidth: outputDict["maxWidth"] as? Int ?? 1280,
-            jpegQuality: outputDict["jpegQuality"] as? Double ?? 0.85
+            maxWidth: extractInt(outputDict["maxWidth"], default: 1280),
+            jpegQuality: extractDouble(outputDict["jpegQuality"], default: 0.85)
         )
 
         let triggers = AppConfig.TriggersConfig(
@@ -92,7 +92,7 @@ enum ConfigLoader {
 
         let capture = AppConfig.CaptureConfig(
             silent: captureDict["silent"] as? Bool ?? true,
-            debounceSeconds: captureDict["debounceSeconds"] as? Int ?? 3
+            debounceSeconds: extractInt(captureDict["debounceSeconds"], default: 3)
         )
 
         return AppConfig(
@@ -131,5 +131,31 @@ enum ConfigLoader {
     /// Expand "~" prefix to the user's home directory.
     private static func expandPath(_ path: String) -> String {
         (path as NSString).expandingTildeInPath
+    }
+
+    // MARK: - Type Coercion Helpers
+
+    /// Extract a Double from YAML value, handling Int→Double coercion.
+    /// YAML parsers may return Int for values like `1` instead of `1.0`.
+    private static func extractDouble(_ value: Any?, default defaultValue: Double) -> Double {
+        if let doubleValue = value as? Double {
+            return doubleValue
+        }
+        if let intValue = value as? Int {
+            return Double(intValue)
+        }
+        return defaultValue
+    }
+
+    /// Extract an Int from YAML value, handling Double→Int coercion.
+    /// YAML parsers may return Double for values like `1280.0` instead of `1280`.
+    private static func extractInt(_ value: Any?, default defaultValue: Int) -> Int {
+        if let intValue = value as? Int {
+            return intValue
+        }
+        if let doubleValue = value as? Double {
+            return Int(doubleValue)
+        }
+        return defaultValue
     }
 }

@@ -104,4 +104,66 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.output.maxWidth, 1280)
         XCTAssertTrue(config.ui.menuBarIcon)
     }
+
+    // MARK: - Int/Double Coercion (YAML type handling)
+
+    func testParsesJpegQualityAsInteger() throws {
+        // YAML `1` is parsed as Int, not Double. Should coerce to 1.0.
+        let yaml = """
+        output:
+          jpegQuality: 1
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.output.jpegQuality, 1.0, accuracy: 0.001)
+    }
+
+    func testParsesJpegQualityAsZeroInteger() throws {
+        // YAML `0` should coerce to 0.0
+        let yaml = """
+        output:
+          jpegQuality: 0
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.output.jpegQuality, 0.0, accuracy: 0.001)
+    }
+
+    func testParsesMaxWidthAsFloat() throws {
+        // YAML `1280.0` is parsed as Double, not Int. Should coerce to 1280.
+        let yaml = """
+        output:
+          maxWidth: 1280.0
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.output.maxWidth, 1280)
+    }
+
+    func testParsesDebounceSecondsAsFloat() throws {
+        // YAML `5.0` is parsed as Double. Should coerce to 5.
+        let yaml = """
+        capture:
+          debounceSeconds: 5.0
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.debounceSeconds, 5)
+    }
+
+    func testParsesDebounceSecondsWithFractionalTruncates() throws {
+        // YAML `3.7` should truncate to 3 (Int conversion)
+        let yaml = """
+        capture:
+          debounceSeconds: 3.7
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.debounceSeconds, 3)
+    }
 }

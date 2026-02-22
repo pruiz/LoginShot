@@ -161,7 +161,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupMenuBar() {
         let controller = MenuBarController(
-            outputDirectory: config.output.directory,
+            outputDirectoryProvider: { [weak self] in
+                self?.config.output.directory ?? AppConfig.default.output.directory
+            },
             onCaptureNow: { [weak self] in
                 self?.handleCaptureEvent(.manual)
             },
