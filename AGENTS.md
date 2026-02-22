@@ -47,7 +47,7 @@ Keep v1 local-only: no cloud APIs, no face recognition.
   - `Config/` (load/parse/defaults/path expansion)
   - `Storage/` (filenaming, atomic writes, sidecar JSON)
   - `Util/` (debounce, clock/time helpers, logging helpers)
-- `LaunchAgent/` (plist + install/uninstall scripts; likely v1.1)
+- `LaunchAgent/` (plist template + install/uninstall scripts)
 
 Agents may scaffold this structure as needed.
 
