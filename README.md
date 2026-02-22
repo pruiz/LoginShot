@@ -27,7 +27,7 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
 
 ## Requirements
 - macOS 13+ recommended
-- Xcode 15+ recommended
+- Xcode 16+ recommended
 - Camera permission granted to the app (macOS will prompt at first run)
 
 ## CI
