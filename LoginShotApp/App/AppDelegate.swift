@@ -28,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 3. Setup unlock observer
         let observer = UnlockObserver()
         if config.triggers.onUnlock {
-            observer.start { [weak self] event in
+            observer.start(debounceSeconds: config.capture.debounceSeconds) { [weak self] event in
                 self?.handleCaptureEvent(event)
             }
         }
@@ -81,8 +81,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
 
                 Log.app.info("Capture complete: \(filename)")
-            } catch CaptureError.notImplemented {
-                Log.app.warning("Capture skipped — capture service is a stub (not yet implemented)")
             } catch {
                 Log.app.error("Capture failed for event '\(event.rawValue)': \(error.localizedDescription)")
             }

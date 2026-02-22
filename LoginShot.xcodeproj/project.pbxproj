@@ -20,6 +20,7 @@
 		BB000000000000000000000B /* UnlockObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000B /* UnlockObserver.swift */; };
 		BB000000000000000000000C /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000C /* Logging.swift */; };
 		BB000000000000000000000D /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = AE0000000000000000000001 /* Yams */; };
+		BB000000000000000000000E /* Debouncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000000F /* Debouncer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		FF000000000000000000000C /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
 		FF000000000000000000000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FF000000000000000000000E /* LoginShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LoginShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF000000000000000000000F /* Debouncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debouncer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +125,7 @@
 		AA0000000000000000000008 /* Util */ = {
 			isa = PBXGroup;
 			children = (
+				FF000000000000000000000F /* Debouncer.swift */,
 				FF000000000000000000000C /* Logging.swift */,
 			);
 			path = Util;
@@ -223,6 +226,7 @@
 				BB000000000000000000000A /* CaptureEvent.swift in Sources */,
 				BB000000000000000000000B /* UnlockObserver.swift in Sources */,
 				BB000000000000000000000C /* Logging.swift in Sources */,
+				BB000000000000000000000E /* Debouncer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
