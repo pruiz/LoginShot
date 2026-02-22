@@ -9,15 +9,15 @@ final class MenuBarController: NSObject {
     private let onCaptureNow: @MainActor () -> Void
     private let onReloadConfig: @MainActor () -> Void
     private let onGenerateConfig: @MainActor () -> Void
-    private let outputDirectory: String
+    private let outputDirectoryProvider: @MainActor () -> String
 
     init(
-        outputDirectory: String,
+        outputDirectoryProvider: @escaping @MainActor () -> String,
         onCaptureNow: @escaping @MainActor () -> Void,
         onReloadConfig: @escaping @MainActor () -> Void,
         onGenerateConfig: @escaping @MainActor () -> Void
     ) {
-        self.outputDirectory = outputDirectory
+        self.outputDirectoryProvider = outputDirectoryProvider
         self.onCaptureNow = onCaptureNow
         self.onReloadConfig = onReloadConfig
         self.onGenerateConfig = onGenerateConfig
@@ -105,7 +105,7 @@ final class MenuBarController: NSObject {
 
     @objc private func openOutputFolderAction(_ sender: Any?) {
         Log.ui.info("Menu: Open Output Folder")
-        let url = URL(fileURLWithPath: outputDirectory, isDirectory: true)
+        let url = URL(fileURLWithPath: outputDirectoryProvider(), isDirectory: true)
         NSWorkspace.shared.open(url)
     }
 
