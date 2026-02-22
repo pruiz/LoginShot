@@ -129,15 +129,16 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             output.capturePhoto(with: settings, delegate: self)
         }
 
-        // Tear down: remove inputs/outputs before stopping to avoid
+        // Tear down: remove outputs/inputs BEFORE stopping to avoid
         // "NSKVONotifying_AVCapturePhotoOutput not linked" runtime warning.
-        session.stopRunning()
-        for sessionInput in session.inputs {
-            session.removeInput(sessionInput)
-        }
+        // Order matters: outputs first (to release KVO observers), then inputs, then stop.
         for sessionOutput in session.outputs {
             session.removeOutput(sessionOutput)
         }
+        for sessionInput in session.inputs {
+            session.removeInput(sessionInput)
+        }
+        session.stopRunning()
         Log.capture.info("Capture complete (\(result.jpegData.count) bytes)")
 
         return result
