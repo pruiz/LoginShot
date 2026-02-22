@@ -70,7 +70,7 @@ jobs:
 
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_NAME"
 
-          if ! unzip -l "$ZIP_NAME" | rg -q "LoginShot\.app/Contents/MacOS/LoginShot$"; then
+          if ! unzip -l "$ZIP_NAME" | grep -Eq "LoginShot\.app/Contents/MacOS/LoginShot$"; then
             echo "Error: packaged zip does not contain LoginShot.app executable" >&2
             exit 1
           fi
