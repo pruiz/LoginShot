@@ -61,6 +61,7 @@ jobs:
           TAG="${{ steps.tag.outputs.tag }}"
           APP_PATH="$DERIVED_DATA_PATH/Build/Products/Release/LoginShot.app"
           ZIP_NAME="LoginShot-macos-${TAG}.zip"
+          CHECKSUM_NAME="${ZIP_NAME}.sha256"
 
           if [[ ! -d "$APP_PATH" ]]; then
             echo "Error: app not found at $APP_PATH" >&2
@@ -68,7 +69,16 @@ jobs:
           fi
 
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_NAME"
+
+          if ! unzip -l "$ZIP_NAME" | rg -q "LoginShot\.app/Contents/MacOS/LoginShot$"; then
+            echo "Error: packaged zip does not contain LoginShot.app executable" >&2
+            exit 1
+          fi
+
+          shasum -a 256 "$ZIP_NAME" > "$CHECKSUM_NAME"
+
           echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "checksum_name=$CHECKSUM_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Create or update GitHub Release
         shell: bash
@@ -76,11 +86,12 @@ jobs:
           set -euo pipefail
           TAG="${{ steps.tag.outputs.tag }}"
           ZIP_NAME="${{ steps.package.outputs.zip_name }}"
+          CHECKSUM_NAME="${{ steps.package.outputs.checksum_name }}"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP_NAME" --clobber
+            gh release upload "$TAG" "$ZIP_NAME" "$CHECKSUM_NAME" --clobber
           else
-            gh release create "$TAG" "$ZIP_NAME" \
+            gh release create "$TAG" "$ZIP_NAME" "$CHECKSUM_NAME" \
               --title "$TAG" \
               --notes "Unsigned macOS build for development/testing.\n\nThis artifact is not code-signed or notarized." \
               --target "$GITHUB_SHA"

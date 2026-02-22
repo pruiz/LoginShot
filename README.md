@@ -48,7 +48,15 @@ LoginShot publishes unsigned macOS release artifacts via GitHub Actions.
    git tag v1.2.3
    git push origin v1.2.3
    ```
-2. GitHub Actions builds `Release` and uploads `LoginShot-macos-v1.2.3.zip` to the GitHub Release.
+2. GitHub Actions builds `Release` and uploads two assets to the GitHub Release:
+   - `LoginShot-macos-v1.2.3.zip`
+   - `LoginShot-macos-v1.2.3.zip.sha256`
+
+Verify download integrity:
+
+```bash
+shasum -a 256 -c LoginShot-macos-v1.2.3.zip.sha256
+```
 
 You can also run the release workflow manually from GitHub UI and provide `version` (for example, `v1.2.3`).
 
