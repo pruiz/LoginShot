@@ -143,6 +143,9 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
   - You may see `objc: class NSKVONotifying_AVCapturePhotoOutput not linked into application` when launching from console.
   - This warning is emitted by Apple runtime/framework internals and does not affect capture functionality.
   - LoginShot intentionally keeps `AVCapturePhotoOutput` for still-photo quality.
+- **Tests behave differently than app launch**
+  - XCTest runs skip normal `AppDelegate` startup paths to avoid camera permission side effects during tests.
+  - This is expected and does not change production capture behavior.
 - **Cloud folder path**
   - Prefer the real local sync path (e.g. `~/Library/CloudStorage/...`) over symlinks.
 
