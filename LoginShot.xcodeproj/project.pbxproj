@@ -28,6 +28,7 @@
 		BB0000000000000000000024 /* DebouncerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000024 /* DebouncerTests.swift */; };
 		BB0000000000000000000025 /* CaptureMetadataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000025 /* CaptureMetadataTests.swift */; };
 		BB0000000000000000000026 /* StorageWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000026 /* StorageWriterTests.swift */; };
+		BB0000000000000000000027 /* ConfigWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000027 /* ConfigWriterTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 		FF0000000000000000000024 /* DebouncerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebouncerTests.swift; sourceTree = "<group>"; };
 		FF0000000000000000000025 /* CaptureMetadataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureMetadataTests.swift; sourceTree = "<group>"; };
 		FF0000000000000000000026 /* StorageWriterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageWriterTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000027 /* ConfigWriterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigWriterTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,6 +192,7 @@
 				FF0000000000000000000024 /* DebouncerTests.swift */,
 				FF0000000000000000000025 /* CaptureMetadataTests.swift */,
 				FF0000000000000000000026 /* StorageWriterTests.swift */,
+				FF0000000000000000000027 /* ConfigWriterTests.swift */,
 			);
 			path = LoginShotTests;
 			sourceTree = "<group>";
@@ -307,6 +310,7 @@
 				BB0000000000000000000024 /* DebouncerTests.swift in Sources */,
 				BB0000000000000000000025 /* CaptureMetadataTests.swift in Sources */,
 				BB0000000000000000000026 /* StorageWriterTests.swift in Sources */,
+				BB0000000000000000000027 /* ConfigWriterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

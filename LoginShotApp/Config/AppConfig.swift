@@ -46,6 +46,8 @@ struct AppConfig: Sendable {
     }
 
     struct CaptureConfig: Sendable {
+        /// Reserved for future use. macOS does not play a shutter sound for
+        /// AVFoundation still captures, so this has no effect in v1.
         var silent: Bool
         var debounceSeconds: Int
 
