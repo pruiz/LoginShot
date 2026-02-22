@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/pruiz/LoginShot/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/pruiz/LoginShot/actions/workflows/ci.yml)
 
-LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login) and when the session is **unlocked**, then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine.
+LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login) and when the session is **unlocked**, then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine. (PoC of original idea by @aramosf)
 
 > **Privacy notice**
 > This tool records images from your Mac’s camera. Use it only on devices you own/administer, and only in compliance with applicable laws and policies. In many places you must disclose camera-based monitoring.
