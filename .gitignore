@@ -60,3 +60,9 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Xcode derived data
+DerivedData/
+
+# SPM resolved file (auto-generated)
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
