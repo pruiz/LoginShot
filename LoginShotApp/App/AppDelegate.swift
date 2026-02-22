@@ -4,11 +4,47 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
+    // MARK: - Dependencies
+
+    private let captureService: CaptureServiceProtocol
+    private let storageWriter: StorageWriterProtocol
+    private let configLoader: ConfigLoaderProtocol
+    private let unlockObserverFactory: @MainActor () -> UnlockObserving
+    private let dateProvider: DateProviderProtocol
+
+    // MARK: - State
+
     private var config: AppConfig = .default
     private var menuBarController: MenuBarController?
-    private var unlockObserver: UnlockObserver?
-    private let captureService: CaptureServiceProtocol = CaptureService()
-    private let storageWriter: StorageWriterProtocol = StorageWriter()
+    private var unlockObserver: UnlockObserving?
+
+    // MARK: - Initialization
+
+    /// Production initializer with default dependencies.
+    override init() {
+        self.captureService = CaptureService()
+        self.storageWriter = StorageWriter()
+        self.configLoader = ConfigLoaderImpl()
+        self.unlockObserverFactory = { UnlockObserver() }
+        self.dateProvider = SystemDateProvider()
+        super.init()
+    }
+
+    /// Test initializer with injectable dependencies.
+    init(
+        captureService: CaptureServiceProtocol,
+        storageWriter: StorageWriterProtocol,
+        configLoader: ConfigLoaderProtocol,
+        unlockObserverFactory: @escaping @MainActor () -> UnlockObserving,
+        dateProvider: DateProviderProtocol = SystemDateProvider()
+    ) {
+        self.captureService = captureService
+        self.storageWriter = storageWriter
+        self.configLoader = configLoader
+        self.unlockObserverFactory = unlockObserverFactory
+        self.dateProvider = dateProvider
+        super.init()
+    }
 
     // MARK: - NSApplicationDelegate
 
@@ -26,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 3. Setup unlock observer
-        let observer = UnlockObserver()
+        let observer = unlockObserverFactory()
         if config.triggers.onUnlock {
             observer.start(debounceSeconds: config.capture.debounceSeconds) { [weak self] event in
                 self?.handleCaptureEvent(event)
@@ -51,10 +87,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Capture Pipeline
 
     /// Run the full capture pipeline for a given event.
-    private func handleCaptureEvent(_ event: CaptureEvent) {
+    func handleCaptureEvent(_ event: CaptureEvent) {
         Log.app.info("Capture event: \(event.rawValue)")
 
-        Task { @MainActor [config, captureService, storageWriter] in
+        Task { @MainActor [config, captureService, storageWriter, dateProvider] in
             do {
                 // 1. Capture JPEG from camera
                 let result = try await captureService.captureJPEG(
@@ -63,7 +99,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
 
                 // 2. Build metadata
-                let filename = Self.makeFilename(event: event, format: config.output.format)
+                let filename = Self.makeFilename(
+                    event: event,
+                    format: config.output.format,
+                    date: dateProvider.now()
+                )
                 let outputPath = (config.output.directory as NSString)
                     .appendingPathComponent(filename)
                 let metadata = CaptureMetadata.build(
@@ -89,9 +129,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Config
 
-    private func reloadConfig() {
+    func reloadConfig() {
         let previousMenuBarEnabled = config.ui.menuBarIcon
-        config = ConfigLoader.load()
+        config = configLoader.load()
 
         let currentMenuBarEnabled = self.config.ui.menuBarIcon
         if currentMenuBarEnabled != previousMenuBarEnabled {
@@ -139,11 +179,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Filename Generation
 
     /// Generate a timestamped filename: YYYY-MM-DDTHH-mm-ss-<event>.<ext>
-    static func makeFilename(event: CaptureEvent, format: String) -> String {
+    /// - Parameters:
+    ///   - event: The capture event type.
+    ///   - format: The file extension (e.g., "jpg").
+    ///   - date: The date to use for timestamp (defaults to current date).
+    /// - Returns: Formatted filename string.
+    static func makeFilename(event: CaptureEvent, format: String, date: Date = Date()) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH-mm-ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        let timestamp = formatter.string(from: Date())
+        let timestamp = formatter.string(from: date)
         return "\(timestamp)-\(event.rawValue).\(format)"
+    }
+
+    // MARK: - Test Helpers
+
+    /// Get the current config (for testing).
+    var currentConfig: AppConfig {
+        config
     }
 }
