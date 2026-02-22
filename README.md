@@ -47,8 +47,45 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
    You can also generate a sample config from the menu bar (see Menu Bar below).
 
 5. Enable autostart on login:
-   - **Planned for v1.1:** a LaunchAgent plist installer in this repo.
-   - During development, you can run from Xcode or manually launch the built app.
+   - Install the user LaunchAgent:
+     ```bash
+     ./LaunchAgent/install.sh
+     ```
+   - If the app is not in `/Applications/LoginShot.app` or `~/Applications/LoginShot.app`, pass an explicit path:
+     ```bash
+     ./LaunchAgent/install.sh --app "/path/to/LoginShot.app"
+     ```
+
+## LaunchAgent Autostart
+
+Install for current user:
+
+```bash
+./LaunchAgent/install.sh
+```
+
+Uninstall:
+
+```bash
+./LaunchAgent/uninstall.sh
+```
+
+Uninstall and remove logs:
+
+```bash
+./LaunchAgent/uninstall.sh --purge-logs
+```
+
+Verify loaded state:
+
+```bash
+launchctl print gui/$(id -u)/dev.pruiz.LoginShot
+```
+
+Agent logs:
+
+- `~/Library/Logs/LoginShot/agent.out.log`
+- `~/Library/Logs/LoginShot/agent.err.log`
 
 ## Configuration (YAML)
 
