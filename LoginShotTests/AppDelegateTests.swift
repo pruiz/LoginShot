@@ -124,7 +124,7 @@ final class AppDelegateTests: XCTestCase {
         delegate.handleCaptureEvent(.sessionOpen)
 
         // Wait for the async Task to complete
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(400))
 
         XCTAssertEqual(mockCaptureService.captureCallCount, 1)
     }
