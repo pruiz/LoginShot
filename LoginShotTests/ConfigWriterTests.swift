@@ -100,6 +100,7 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("ui:"), "Missing ui section")
         XCTAssertTrue(yaml.contains("capture:"), "Missing capture section")
         XCTAssertTrue(yaml.contains("logging:"), "Missing logging section")
+        XCTAssertTrue(yaml.contains("watermark:"), "Missing watermark section")
     }
 
     func testSampleYAMLContainsDefaultValues() {
@@ -112,6 +113,8 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("cameraUniqueID: null"), "Missing default cameraUniqueID")
         XCTAssertTrue(yaml.contains("onLock: true"), "Missing default onLock")
         XCTAssertTrue(yaml.contains("enableFileLogging: false"), "Missing default file logging toggle")
+        XCTAssertTrue(yaml.contains("enabled: true"), "Missing default watermark enabled")
+        XCTAssertTrue(yaml.contains("format: \"yyyy-MM-dd HH:mm:ss zzz\""), "Missing default watermark format")
     }
 
     func testSampleYAMLIsValidYAML() throws {
@@ -131,5 +134,7 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
         XCTAssertFalse(config.logging.enableFileLogging)
+        XCTAssertTrue(config.watermark.enabled)
+        XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
 }

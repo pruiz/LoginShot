@@ -1,8 +1,37 @@
 import AVFoundation
 import CoreGraphics
+import CoreText
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
+
+enum WatermarkFormatter {
+    static let defaultTimestampFormat = "yyyy-MM-dd HH:mm:ss zzz"
+
+    static func text(hostname: String, date: Date, format: String) -> String {
+        "\(hostname) \(timestamp(date: date, format: format))"
+    }
+
+    static func timestamp(date: Date, format: String) -> String {
+        let trimmed = format.trimmingCharacters(in: .whitespacesAndNewlines)
+        let chosenFormat = trimmed.isEmpty ? defaultTimestampFormat : trimmed
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = chosenFormat
+        let value = formatter.string(from: date)
+        if value.isEmpty || (looksLikeLiteralFormat(chosenFormat) && value == chosenFormat) {
+            formatter.dateFormat = defaultTimestampFormat
+            return formatter.string(from: date)
+        }
+        return value
+    }
+
+    private static func looksLikeLiteralFormat(_ format: String) -> Bool {
+        let symbols = CharacterSet(charactersIn: "yYMdDEHhmsSaAzZvV")
+        return format.rangeOfCharacter(from: symbols) == nil
+    }
+}
 
 /// Result of a successful one-shot capture.
 struct CaptureResult: Sendable {
@@ -19,15 +48,36 @@ enum CaptureError: Error, Sendable {
 
 /// Protocol for one-shot webcam capture (test seam).
 protocol CaptureServiceProtocol: Sendable {
-    func captureJPEG(maxWidth: Int, quality: Double, cameraUniqueID: String?) async throws -> CaptureResult
+    func captureJPEG(
+        maxWidth: Int,
+        quality: Double,
+        cameraUniqueID: String?,
+        watermarkEnabled: Bool,
+        watermarkFormat: String,
+        hostname: String
+    ) async throws -> CaptureResult
     func listCameras() -> [CameraDeviceDescriptor]
 }
 
 /// Real AVFoundation one-shot capture implementation.
 /// Acquires camera, captures a single photo, resizes if needed, releases camera.
 final class CaptureService: CaptureServiceProtocol, Sendable {
-    func captureJPEG(maxWidth: Int, quality: Double, cameraUniqueID: String?) async throws -> CaptureResult {
-        try await OneShotCapture.perform(maxWidth: maxWidth, quality: quality, cameraUniqueID: cameraUniqueID)
+    func captureJPEG(
+        maxWidth: Int,
+        quality: Double,
+        cameraUniqueID: String?,
+        watermarkEnabled: Bool,
+        watermarkFormat: String,
+        hostname: String
+    ) async throws -> CaptureResult {
+        try await OneShotCapture.perform(
+            maxWidth: maxWidth,
+            quality: quality,
+            cameraUniqueID: cameraUniqueID,
+            watermarkEnabled: watermarkEnabled,
+            watermarkFormat: watermarkFormat,
+            hostname: hostname
+        )
     }
 
     func listCameras() -> [CameraDeviceDescriptor] {
@@ -60,20 +110,39 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     private var deviceName: String = "Unknown"
     private var devicePosition: String = "unknown"
     private var selectedCameraUniqueID: String?
+    private let watermarkEnabled: Bool
+    private let watermarkFormat: String
+    private let hostname: String
 
-    private init(maxWidth: Int, quality: Double) {
+    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String) {
         self.maxWidth = maxWidth
         self.quality = quality
+        self.watermarkEnabled = watermarkEnabled
+        self.watermarkFormat = watermarkFormat
+        self.hostname = hostname
         super.init()
     }
 
     /// Entry point: check authorization, find camera, capture, return JPEG data.
-    static func perform(maxWidth: Int, quality: Double, cameraUniqueID: String?) async throws -> CaptureResult {
+    static func perform(
+        maxWidth: Int,
+        quality: Double,
+        cameraUniqueID: String?,
+        watermarkEnabled: Bool,
+        watermarkFormat: String,
+        hostname: String
+    ) async throws -> CaptureResult {
         // 1. Check / request camera authorization
         try await ensureCameraAuthorization()
 
         // 2. Run capture
-        let capture = OneShotCapture(maxWidth: maxWidth, quality: quality)
+        let capture = OneShotCapture(
+            maxWidth: maxWidth,
+            quality: quality,
+            watermarkEnabled: watermarkEnabled,
+            watermarkFormat: watermarkFormat,
+            hostname: hostname
+        )
         return try await capture.run(cameraUniqueID: cameraUniqueID)
     }
 
@@ -240,6 +309,13 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             finalImage = cgImage
         }
 
+        let imageForEncoding: CGImage
+        if watermarkEnabled {
+            imageForEncoding = try applyWatermark(to: finalImage)
+        } else {
+            imageForEncoding = finalImage
+        }
+
         // Encode as JPEG with configured quality
         let mutableData = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(
@@ -254,7 +330,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         let options: [CFString: Any] = [
             kCGImageDestinationLossyCompressionQuality: quality
         ]
-        CGImageDestinationAddImage(destination, finalImage, options as CFDictionary)
+        CGImageDestinationAddImage(destination, imageForEncoding, options as CFDictionary)
 
         guard CGImageDestinationFinalize(destination) else {
             throw CaptureError.captureFailed("Failed to finalize JPEG encoding")
@@ -295,5 +371,64 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         }
 
         return discovery.devices.first
+    }
+
+    private func applyWatermark(to image: CGImage) throws -> CGImage {
+        guard let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                  data: nil,
+                  width: image.width,
+                  height: image.height,
+                  bitsPerComponent: 8,
+                  bytesPerRow: 0,
+                  space: colorSpace,
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            throw CaptureError.captureFailed("Failed to create graphics context for watermark")
+        }
+
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+
+        let text = WatermarkFormatter.text(hostname: hostname, date: Date(), format: watermarkFormat)
+        let fontSize = max(16.0, CGFloat(image.width) * 0.02)
+        let font = CTFontCreateWithName("Menlo" as CFString, fontSize, nil)
+
+        let whiteAttrs: [NSAttributedString.Key: Any] = [
+            NSAttributedString.Key(kCTFontAttributeName as String): font,
+            NSAttributedString.Key(kCTForegroundColorAttributeName as String): CGColor(gray: 1.0, alpha: 1.0)
+        ]
+        let blackAttrs: [NSAttributedString.Key: Any] = [
+            NSAttributedString.Key(kCTFontAttributeName as String): font,
+            NSAttributedString.Key(kCTForegroundColorAttributeName as String): CGColor(gray: 0.0, alpha: 0.85)
+        ]
+
+        let whiteLine = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: whiteAttrs))
+        let blackLine = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: blackAttrs))
+
+        var ascent: CGFloat = 0
+        var descent: CGFloat = 0
+        var leading: CGFloat = 0
+        let textWidth = CGFloat(CTLineGetTypographicBounds(whiteLine, &ascent, &descent, &leading))
+
+        let margin: CGFloat = 20
+        let x = max(margin, CGFloat(image.width) - textWidth - margin)
+        let y = margin + descent
+
+        context.textMatrix = .identity
+        let offsets: [(CGFloat, CGFloat)] = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        for (dx, dy) in offsets {
+            context.textPosition = CGPoint(x: x + dx, y: y + dy)
+            CTLineDraw(blackLine, context)
+        }
+
+        context.textPosition = CGPoint(x: x, y: y)
+        CTLineDraw(whiteLine, context)
+
+        guard let watermarked = context.makeImage() else {
+            throw CaptureError.captureFailed("Failed to produce watermarked image")
+        }
+
+        Log.capture.debug("Applied watermark to capture")
+        return watermarked
     }
 }

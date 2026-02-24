@@ -142,6 +142,7 @@ If no config file is found, LoginShot uses these defaults:
 - **Menu bar icon:** enabled
 - **Debounce:** 3 seconds
 - **File logging:** disabled (uses macOS unified logging by default)
+- **Watermark:** enabled (`<hostname> <timestamp>`)
 
 ### YAML example
 ```yaml
@@ -173,7 +174,14 @@ logging:
   retentionDays: 14
   cleanupIntervalHours: 24
   level: "Information"  # Trace|Debug|Information|Warning|Error|Critical|None
+
+watermark:
+  enabled: true
+  format: "yyyy-MM-dd HH:mm:ss zzz"
 ```
+
+When watermarking is enabled, LoginShot overlays `<hostname> <timestamp>` on saved images.
+If `watermark.format` is empty/invalid, LoginShot falls back to `yyyy-MM-dd HH:mm:ss zzz`.
 
 ## Output files
 

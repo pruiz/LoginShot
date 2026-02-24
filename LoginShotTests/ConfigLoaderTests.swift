@@ -30,6 +30,9 @@ final class ConfigLoaderTests: XCTestCase {
           retentionDays: 7
           cleanupIntervalHours: 12
           level: "Debug"
+        watermark:
+          enabled: false
+          format: "yyyy/MM/dd HH:mm"
         """
 
         let config = try ConfigLoader.parse(yaml: yaml)
@@ -51,6 +54,8 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.logging.retentionDays, 7)
         XCTAssertEqual(config.logging.cleanupIntervalHours, 12)
         XCTAssertEqual(config.logging.level, "Debug")
+        XCTAssertFalse(config.watermark.enabled)
+        XCTAssertEqual(config.watermark.format, "yyyy/MM/dd HH:mm")
     }
 
     // MARK: - Partial YAML (missing keys use defaults)
@@ -78,6 +83,8 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
         XCTAssertFalse(config.logging.enableFileLogging)
+        XCTAssertTrue(config.watermark.enabled)
+        XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
 
     // MARK: - Empty YAML
@@ -195,5 +202,18 @@ final class ConfigLoaderTests: XCTestCase {
         let config = try ConfigLoader.parse(yaml: yaml)
 
         XCTAssertEqual(config.capture.cameraUniqueID, "usb-camera-1")
+    }
+
+    func testParsesWatermarkSection() throws {
+        let yaml = """
+        watermark:
+          enabled: false
+          format: "yyyy/MM/dd HH:mm"
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertFalse(config.watermark.enabled)
+        XCTAssertEqual(config.watermark.format, "yyyy/MM/dd HH:mm")
     }
 }

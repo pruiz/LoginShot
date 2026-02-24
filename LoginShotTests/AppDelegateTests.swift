@@ -134,6 +134,8 @@ final class AppDelegateTests: XCTestCase {
         config.output.maxWidth = 800
         config.output.jpegQuality = 0.7
         config.capture.cameraUniqueID = "camera-2"
+        config.watermark.enabled = true
+        config.watermark.format = "yyyy/MM/dd HH:mm"
 
         let delegate = makeAppDelegate(config: config)
         delegate.reloadConfig()
@@ -145,6 +147,9 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(mockCaptureService.lastMaxWidth, 800)
         XCTAssertEqual(mockCaptureService.lastQuality, 0.7)
         XCTAssertEqual(mockCaptureService.lastCameraUniqueID, "camera-2")
+        XCTAssertEqual(mockCaptureService.lastWatermarkEnabled, true)
+        XCTAssertEqual(mockCaptureService.lastWatermarkFormat, "yyyy/MM/dd HH:mm")
+        XCTAssertNotNil(mockCaptureService.lastHostname)
     }
 
     func testHandleCaptureEventCallsStorageWriter() async throws {

@@ -20,6 +20,8 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertTrue(config.watermark.enabled)
+        XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
 
     func testDefaultDirectoryExpandsTilde() {
@@ -116,5 +118,14 @@ final class AppConfigTests: XCTestCase {
         let validated = config.validated()
 
         XCTAssertNil(validated.capture.cameraUniqueID)
+    }
+
+    func testValidationRestoresDefaultWatermarkFormatWhenEmpty() {
+        var config = AppConfig.default
+        config.watermark.format = "  "
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
 }
