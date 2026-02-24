@@ -124,7 +124,10 @@ final class AppDelegateTests: XCTestCase {
         delegate.handleCaptureEvent(.sessionOpen)
 
         // Wait for the async Task to complete
-        try await Task.sleep(for: .milliseconds(400))
+        let deadline = Date().addingTimeInterval(2.0)
+        while mockStorageWriter.writeCallCount == 0 && Date() < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
 
         XCTAssertEqual(mockCaptureService.captureCallCount, 1)
     }
