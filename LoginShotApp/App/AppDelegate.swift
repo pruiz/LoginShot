@@ -155,6 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let unlockObserver: UnlockObserving
     private let dateProvider: DateProviderProtocol
     private let alertPresenter: AlertPresenting
+    private let startupRegistration: StartupRegistrationManaging
 
     // MARK: - State
 
@@ -173,6 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.unlockObserver = UnlockObserver()
         self.dateProvider = SystemDateProvider()
         self.alertPresenter = NSAlertPresenter()
+        self.startupRegistration = StartupRegistrationService()
         super.init()
     }
 
@@ -183,7 +185,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configLoader: ConfigLoaderProtocol,
         unlockObserver: UnlockObserving,
         dateProvider: DateProviderProtocol = SystemDateProvider(),
-        alertPresenter: AlertPresenting = NSAlertPresenter()
+        alertPresenter: AlertPresenting = NSAlertPresenter(),
+        startupRegistration: StartupRegistrationManaging = StartupRegistrationService()
     ) {
         self.captureService = captureService
         self.storageWriter = storageWriter
@@ -191,6 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.unlockObserver = unlockObserver
         self.dateProvider = dateProvider
         self.alertPresenter = alertPresenter
+        self.startupRegistration = startupRegistration
         super.init()
     }
 
@@ -424,6 +428,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onOpenLog: { [weak self] in
                 self?.openCurrentLogFile()
             },
+            startupAtLoginEnabledProvider: { [weak self] in
+                self?.isStartAtLoginEnabled() ?? false
+            },
+            onToggleStartupAtLogin: { [weak self] enabled in
+                self?.setStartAtLoginEnabled(enabled)
+            },
             cameraMenuStateProvider: { [weak self] in
                 self?.cameraMenuState() ?? MenuBarController.CameraMenuState(selectedUniqueID: nil, devices: [])
             },
@@ -544,6 +554,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         _ = try ConfigWriter.writeConfig(config, to: configSourcePath)
         configReloadCoordinator?.bind(configPath: configSourcePath)
+    }
+
+    func isStartAtLoginEnabled() -> Bool {
+        startupRegistration.isEnabled()
+    }
+
+    func setStartAtLoginEnabled(_ enabled: Bool) {
+        do {
+            try startupRegistration.setEnabled(enabled)
+            Log.app.info("Start at login set to \(enabled)")
+        } catch {
+            Log.app.error("Failed to update start at login: \(error.localizedDescription)")
+            alertPresenter.showError(
+                title: "LoginShot",
+                message: "Failed to update Start at Login:\n\(error.localizedDescription)"
+            )
+        }
     }
 
     // MARK: - Filename Generation
