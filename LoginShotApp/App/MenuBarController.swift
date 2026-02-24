@@ -5,12 +5,21 @@ import AppKit
 @MainActor
 final class MenuBarController: NSObject {
 
+    struct CameraMenuState: Sendable {
+        let selectedUniqueID: String?
+        let devices: [CameraDeviceDescriptor]
+    }
+
     private var statusItem: NSStatusItem?
+    private weak var cameraSubmenu: NSMenu?
     private let onCaptureNow: @MainActor () -> Void
     private let onReloadConfig: @MainActor () -> Void
     private let onEditConfig: @MainActor () -> Void
     private let onGenerateConfig: @MainActor () -> Void
     private let onOpenLog: @MainActor () -> Void
+    private let cameraMenuStateProvider: @MainActor () -> CameraMenuState
+    private let onSelectCamera: @MainActor (String?) -> Void
+    private let onVerifyCamera: @MainActor () -> Void
     private let outputDirectoryProvider: @MainActor () -> String
 
     init(
@@ -19,7 +28,10 @@ final class MenuBarController: NSObject {
         onReloadConfig: @escaping @MainActor () -> Void,
         onEditConfig: @escaping @MainActor () -> Void,
         onGenerateConfig: @escaping @MainActor () -> Void,
-        onOpenLog: @escaping @MainActor () -> Void
+        onOpenLog: @escaping @MainActor () -> Void,
+        cameraMenuStateProvider: @escaping @MainActor () -> CameraMenuState,
+        onSelectCamera: @escaping @MainActor (String?) -> Void,
+        onVerifyCamera: @escaping @MainActor () -> Void
     ) {
         self.outputDirectoryProvider = outputDirectoryProvider
         self.onCaptureNow = onCaptureNow
@@ -27,6 +39,9 @@ final class MenuBarController: NSObject {
         self.onEditConfig = onEditConfig
         self.onGenerateConfig = onGenerateConfig
         self.onOpenLog = onOpenLog
+        self.cameraMenuStateProvider = cameraMenuStateProvider
+        self.onSelectCamera = onSelectCamera
+        self.onVerifyCamera = onVerifyCamera
         super.init()
     }
 
@@ -58,6 +73,15 @@ final class MenuBarController: NSObject {
         )
         openItem.target = self
         menu.addItem(openItem)
+
+        let cameraItem = NSMenuItem(title: "Camera", action: nil, keyEquivalent: "")
+        let cameraSubmenu = NSMenu(title: "Camera")
+        cameraSubmenu.delegate = self
+        cameraItem.submenu = cameraSubmenu
+        menu.addItem(cameraItem)
+        self.cameraSubmenu = cameraSubmenu
+
+        rebuildCameraSubmenu(cameraSubmenu)
 
         menu.addItem(.separator())
 
@@ -151,8 +175,59 @@ final class MenuBarController: NSObject {
         onOpenLog()
     }
 
+    @objc private func selectCameraAction(_ sender: NSMenuItem) {
+        let uniqueID = sender.representedObject as? String
+        Log.ui.info("Menu: Select Camera \(uniqueID ?? "auto")")
+        onSelectCamera(uniqueID)
+        if let submenu = cameraSubmenu {
+            rebuildCameraSubmenu(submenu)
+        }
+    }
+
+    @objc private func verifyCameraAction(_ sender: Any?) {
+        Log.ui.info("Menu: Verify selected camera")
+        onVerifyCamera()
+    }
+
     @objc private func quitAction(_ sender: Any?) {
         Log.ui.info("Menu: Quit")
         NSApplication.shared.terminate(nil)
+    }
+
+    private func rebuildCameraSubmenu(_ submenu: NSMenu) {
+        submenu.removeAllItems()
+
+        let state = cameraMenuStateProvider()
+
+        let autoItem = NSMenuItem(title: "Auto (default)", action: #selector(selectCameraAction(_:)), keyEquivalent: "")
+        autoItem.target = self
+        autoItem.state = state.selectedUniqueID == nil ? NSControl.StateValue.on : NSControl.StateValue.off
+        autoItem.representedObject = nil
+        submenu.addItem(autoItem)
+
+        if !state.devices.isEmpty {
+            submenu.addItem(.separator())
+        }
+
+        for device in state.devices {
+            let title = "\(device.deviceName) [\(device.position)]"
+            let item = NSMenuItem(title: title, action: #selector(selectCameraAction(_:)), keyEquivalent: "")
+            item.target = self
+            item.state = state.selectedUniqueID == device.uniqueID ? NSControl.StateValue.on : NSControl.StateValue.off
+            item.representedObject = device.uniqueID
+            submenu.addItem(item)
+        }
+
+        submenu.addItem(.separator())
+        let verifyItem = NSMenuItem(title: "Verify selected camera", action: #selector(verifyCameraAction(_:)), keyEquivalent: "")
+        verifyItem.target = self
+        submenu.addItem(verifyItem)
+    }
+}
+
+extension MenuBarController: NSMenuDelegate {
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu == cameraSubmenu else { return }
+        rebuildCameraSubmenu(menu)
     }
 }

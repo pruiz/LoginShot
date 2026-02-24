@@ -19,6 +19,7 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.ui.menuBarIcon)
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
+        XCTAssertNil(config.capture.cameraUniqueID)
     }
 
     func testDefaultDirectoryExpandsTilde() {
@@ -106,5 +107,14 @@ final class AppConfigTests: XCTestCase {
         config.capture.debounceSeconds = 10
         let validated = config.validated()
         XCTAssertEqual(validated.capture.debounceSeconds, 10)
+    }
+
+    func testValidationClearsEmptyCameraUniqueID() {
+        var config = AppConfig.default
+        config.capture.cameraUniqueID = "   "
+
+        let validated = config.validated()
+
+        XCTAssertNil(validated.capture.cameraUniqueID)
     }
 }

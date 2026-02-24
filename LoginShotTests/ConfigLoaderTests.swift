@@ -23,6 +23,7 @@ final class ConfigLoaderTests: XCTestCase {
         capture:
           silent: false
           debounceSeconds: 5
+          cameraUniqueID: "camera-abc"
         logging:
           enableFileLogging: true
           directory: "~/Library/Logs/LoginShot"
@@ -45,6 +46,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertFalse(config.ui.menuBarIcon)
         XCTAssertFalse(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 5)
+        XCTAssertEqual(config.capture.cameraUniqueID, "camera-abc")
         XCTAssertTrue(config.logging.enableFileLogging)
         XCTAssertEqual(config.logging.retentionDays, 7)
         XCTAssertEqual(config.logging.cleanupIntervalHours, 12)
@@ -74,6 +76,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertTrue(config.ui.menuBarIcon)
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
+        XCTAssertNil(config.capture.cameraUniqueID)
         XCTAssertFalse(config.logging.enableFileLogging)
     }
 
@@ -181,5 +184,16 @@ final class ConfigLoaderTests: XCTestCase {
         let config = try ConfigLoader.parse(yaml: yaml)
 
         XCTAssertEqual(config.capture.debounceSeconds, 3)
+    }
+
+    func testParsesCameraUniqueIDAsString() throws {
+        let yaml = """
+        capture:
+          cameraUniqueID: "usb-camera-1"
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.cameraUniqueID, "usb-camera-1")
     }
 }

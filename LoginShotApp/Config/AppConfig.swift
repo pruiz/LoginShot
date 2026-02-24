@@ -53,8 +53,9 @@ struct AppConfig: Sendable {
         /// AVFoundation still captures, so this has no effect in v1.
         var silent: Bool
         var debounceSeconds: Int
+        var cameraUniqueID: String?
 
-        static let `default` = CaptureConfig(silent: true, debounceSeconds: 3)
+        static let `default` = CaptureConfig(silent: true, debounceSeconds: 3, cameraUniqueID: nil)
     }
 
     struct LoggingConfig: Sendable {
@@ -110,6 +111,16 @@ struct AppConfig: Sendable {
         if config.capture.debounceSeconds < 0 {
             Log.config.warning("capture.debounceSeconds \(config.capture.debounceSeconds) is negative; setting to 0")
             config.capture.debounceSeconds = 0
+        }
+
+        if let cameraUniqueID = config.capture.cameraUniqueID {
+            let trimmed = cameraUniqueID.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                Log.config.warning("capture.cameraUniqueID is empty; using automatic camera selection")
+                config.capture.cameraUniqueID = nil
+            } else if trimmed != cameraUniqueID {
+                config.capture.cameraUniqueID = trimmed
+            }
         }
 
         if config.logging.retentionDays < 1 {

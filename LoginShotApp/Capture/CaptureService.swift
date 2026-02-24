@@ -19,14 +19,31 @@ enum CaptureError: Error, Sendable {
 
 /// Protocol for one-shot webcam capture (test seam).
 protocol CaptureServiceProtocol: Sendable {
-    func captureJPEG(maxWidth: Int, quality: Double) async throws -> CaptureResult
+    func captureJPEG(maxWidth: Int, quality: Double, cameraUniqueID: String?) async throws -> CaptureResult
+    func listCameras() -> [CameraDeviceDescriptor]
 }
 
 /// Real AVFoundation one-shot capture implementation.
 /// Acquires camera, captures a single photo, resizes if needed, releases camera.
 final class CaptureService: CaptureServiceProtocol, Sendable {
-    func captureJPEG(maxWidth: Int, quality: Double) async throws -> CaptureResult {
-        try await OneShotCapture.perform(maxWidth: maxWidth, quality: quality)
+    func captureJPEG(maxWidth: Int, quality: Double, cameraUniqueID: String?) async throws -> CaptureResult {
+        try await OneShotCapture.perform(maxWidth: maxWidth, quality: quality, cameraUniqueID: cameraUniqueID)
+    }
+
+    func listCameras() -> [CameraDeviceDescriptor] {
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
+            mediaType: .video,
+            position: .unspecified
+        )
+
+        return discovery.devices.map {
+            CameraDeviceDescriptor(
+                uniqueID: $0.uniqueID,
+                deviceName: $0.localizedName,
+                position: OneShotCapture.positionString($0.position)
+            )
+        }
     }
 }
 
@@ -42,6 +59,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     private var continuation: CheckedContinuation<CaptureResult, Error>?
     private var deviceName: String = "Unknown"
     private var devicePosition: String = "unknown"
+    private var selectedCameraUniqueID: String?
 
     private init(maxWidth: Int, quality: Double) {
         self.maxWidth = maxWidth
@@ -50,13 +68,13 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     }
 
     /// Entry point: check authorization, find camera, capture, return JPEG data.
-    static func perform(maxWidth: Int, quality: Double) async throws -> CaptureResult {
+    static func perform(maxWidth: Int, quality: Double, cameraUniqueID: String?) async throws -> CaptureResult {
         // 1. Check / request camera authorization
         try await ensureCameraAuthorization()
 
         // 2. Run capture
         let capture = OneShotCapture(maxWidth: maxWidth, quality: quality)
-        return try await capture.run()
+        return try await capture.run(cameraUniqueID: cameraUniqueID)
     }
 
     // MARK: - Authorization
@@ -82,14 +100,15 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
 
     // MARK: - Capture
 
-    private func run() async throws -> CaptureResult {
-        // Find default video device
-        guard let device = AVCaptureDevice.default(for: .video) else {
+    private func run(cameraUniqueID: String?) async throws -> CaptureResult {
+        // Find selected or default video device
+        guard let device = selectCamera(cameraUniqueID: cameraUniqueID) else {
             throw CaptureError.cameraUnavailable("No video capture device found")
         }
 
         deviceName = device.localizedName
         devicePosition = Self.positionString(device.position)
+        selectedCameraUniqueID = device.uniqueID
         Log.capture.info("Using camera: \(device.localizedName) (\(self.devicePosition))")
 
         // Setup session
@@ -170,7 +189,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         // Resize and re-encode as JPEG
         do {
             let jpegData = try processImage(data: imageData)
-            let cameraInfo = CameraInfo(deviceName: deviceName, position: devicePosition)
+            let cameraInfo = CameraInfo(deviceName: deviceName, position: devicePosition, uniqueID: selectedCameraUniqueID)
             continuation.resume(returning: CaptureResult(jpegData: jpegData, cameraInfo: cameraInfo))
         } catch {
             continuation.resume(throwing: error)
@@ -246,12 +265,35 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
 
     // MARK: - Helpers
 
-    private static func positionString(_ position: AVCaptureDevice.Position) -> String {
+    static func positionString(_ position: AVCaptureDevice.Position) -> String {
         switch position {
         case .front: "front"
         case .back: "back"
         case .unspecified: "unspecified"
         @unknown default: "unknown"
         }
+    }
+
+    private func selectCamera(cameraUniqueID: String?) -> AVCaptureDevice? {
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera, .externalUnknown],
+            mediaType: .video,
+            position: .unspecified
+        )
+
+        if let cameraUniqueID,
+           let selected = discovery.devices.first(where: { $0.uniqueID == cameraUniqueID }) {
+            return selected
+        }
+
+        if let cameraUniqueID {
+            Log.capture.warning("Configured cameraUniqueID \(cameraUniqueID) not found; falling back to default camera")
+        }
+
+        if let fallback = AVCaptureDevice.default(for: .video) {
+            return fallback
+        }
+
+        return discovery.devices.first
     }
 }

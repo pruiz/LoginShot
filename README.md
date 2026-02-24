@@ -165,6 +165,7 @@ ui:
 capture:
   silent: true           # no effect in v1 (macOS has no shutter sound); reserved for future use
   debounceSeconds: 3
+  cameraUniqueID: null   # null = automatic/default camera selection
 
 logging:
   enableFileLogging: false
@@ -210,7 +211,8 @@ If enabled, a sidecar metadata JSON is also written:
   },
   "camera": {
     "deviceName": "FaceTime HD Camera",
-    "position": "front"
+    "position": "front",
+    "uniqueID": "com.apple.avfoundation.avcapturedevice.built-in_video:0"
   }
 }
 ```
@@ -223,6 +225,7 @@ When `ui.menuBarIcon` is `true` (the default), LoginShot shows a camera icon in 
 |-----------|-------------|
 | **Capture Now** | Take a snapshot immediately (tagged as `manual` event) |
 | **Open Output Folder** | Reveal the output directory in Finder |
+| **Camera** | Select `Auto` or a specific camera by unique ID, and verify selected camera |
 | **Open Log** | Open current daily log file (when `logging.enableFileLogging` is true) |
 | **Edit Config** | Open active `config.yml`; if none exists, generate one first |
 | **Reload Config** | Re-read the YAML config file without restarting |
