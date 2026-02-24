@@ -126,9 +126,7 @@ final class ConfigReloadCoordinator: ConfigReloadCoordinating, @unchecked Sendab
         pendingWorkItem?.cancel()
         let reloadCallback = onReloadRequested
 
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            _ = self
+        let workItem = DispatchWorkItem {
             DispatchQueue.main.async {
                 reloadCallback()
             }
