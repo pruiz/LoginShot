@@ -6,6 +6,7 @@ import Yams
 /// Protocol for loading configuration (test seam).
 protocol ConfigLoaderProtocol: Sendable {
     func load() -> AppConfig
+    func loadResult() -> ConfigLoadResult
 }
 
 /// Default implementation that wraps the static ConfigLoader methods.
@@ -13,6 +14,16 @@ struct ConfigLoaderImpl: ConfigLoaderProtocol, Sendable {
     func load() -> AppConfig {
         ConfigLoader.load()
     }
+
+    func loadResult() -> ConfigLoadResult {
+        ConfigLoader.loadResult()
+    }
+}
+
+enum ConfigLoadResult {
+    case loaded(config: AppConfig, sourcePath: String)
+    case notFound(defaults: AppConfig)
+    case failed(path: String, error: Error)
 }
 
 // MARK: - ConfigLoader Implementation
@@ -33,11 +44,22 @@ enum ConfigLoader {
 
     /// Load configuration from disk, returning defaults if no file is found.
     static func load() -> AppConfig {
+        switch loadResult() {
+        case .loaded(let config, _):
+            return config
+        case .notFound(let defaults):
+            return defaults
+        case .failed(_, _):
+            return AppConfig.default
+        }
+    }
+
+    static func loadResult() -> ConfigLoadResult {
         ensureAppSupportDirectory()
 
         guard let path = firstExistingPath() else {
             Log.config.info("No config file found; using defaults")
-            return AppConfig.default
+            return .notFound(defaults: AppConfig.default)
         }
 
         Log.config.info("Loading config from \(path)")
@@ -47,10 +69,10 @@ enum ConfigLoader {
             let config = try parse(yaml: contents)
             let validated = config.validated()
             Log.config.info("Config loaded and validated successfully")
-            return validated
+            return .loaded(config: validated, sourcePath: path)
         } catch {
-            Log.config.error("Failed to load config from \(path): \(error.localizedDescription); using defaults")
-            return AppConfig.default
+            Log.config.error("Failed to load config from \(path): \(error.localizedDescription)")
+            return .failed(path: path, error: error)
         }
     }
 

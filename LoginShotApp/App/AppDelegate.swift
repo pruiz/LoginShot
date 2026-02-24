@@ -1,22 +1,167 @@
 import AppKit
 
+protocol AlertPresenting: Sendable {
+    @MainActor func showInfo(title: String, message: String)
+    @MainActor func showError(title: String, message: String)
+}
+
+struct NSAlertPresenter: AlertPresenting {
+    @MainActor
+    func showInfo(title: String, message: String) {
+        show(title: title, message: message, style: .informational)
+    }
+
+    @MainActor
+    func showError(title: String, message: String) {
+        show(title: title, message: message, style: .warning)
+    }
+
+    @MainActor
+    private func show(title: String, message: String, style: NSAlert.Style) {
+        let alert = NSAlert()
+        alert.alertStyle = style
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+}
+
+protocol ConfigReloadCoordinating: AnyObject {
+    func bind(configPath: String?)
+    func unbind()
+}
+
+final class ConfigReloadCoordinator: ConfigReloadCoordinating, @unchecked Sendable {
+    private let onReloadRequested: @MainActor () -> Void
+    private let debounceInterval: TimeInterval
+    private let queue = DispatchQueue(label: "dev.pruiz.LoginShot.config-watcher")
+
+    private var watchedPath: String?
+    private var directoryFD: Int32 = -1
+    private var source: DispatchSourceFileSystemObject?
+    private var pendingWorkItem: DispatchWorkItem?
+
+    init(
+        debounceInterval: TimeInterval = 1.2,
+        onReloadRequested: @escaping @MainActor () -> Void
+    ) {
+        self.debounceInterval = debounceInterval
+        self.onReloadRequested = onReloadRequested
+    }
+
+    deinit {
+        unbind()
+    }
+
+    func bind(configPath: String?) {
+        queue.async { [weak self] in
+            guard let self else { return }
+
+            guard let configPath else {
+                self.stopWatchingLocked()
+                return
+            }
+
+            if self.watchedPath == configPath, self.source != nil {
+                return
+            }
+
+            self.stopWatchingLocked()
+            self.watchedPath = configPath
+
+            let directory = (configPath as NSString).deletingLastPathComponent
+            let fd = open(directory, O_EVTONLY)
+            guard fd >= 0 else {
+                Log.config.warning("Could not watch config directory: \(directory)")
+                return
+            }
+
+            self.directoryFD = fd
+            let source = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: fd,
+                eventMask: [.write, .rename, .delete, .extend, .attrib],
+                queue: self.queue
+            )
+
+            source.setEventHandler { [weak self] in
+                self?.scheduleDebouncedReloadLocked()
+            }
+
+            source.setCancelHandler { [weak self] in
+                guard let self else { return }
+                if self.directoryFD >= 0 {
+                    close(self.directoryFD)
+                    self.directoryFD = -1
+                }
+            }
+
+            self.source = source
+            source.resume()
+            Log.config.info("Watching config changes at \(configPath)")
+        }
+    }
+
+    func unbind() {
+        queue.async { [weak self] in
+            self?.stopWatchingLocked()
+        }
+    }
+
+    private func stopWatchingLocked() {
+        pendingWorkItem?.cancel()
+        pendingWorkItem = nil
+        watchedPath = nil
+
+        source?.cancel()
+        source = nil
+
+        if directoryFD >= 0 {
+            close(directoryFD)
+            directoryFD = -1
+        }
+    }
+
+    private func scheduleDebouncedReloadLocked() {
+        pendingWorkItem?.cancel()
+        let reloadCallback = onReloadRequested
+
+        let workItem = DispatchWorkItem {
+            DispatchQueue.main.async {
+                reloadCallback()
+            }
+        }
+
+        pendingWorkItem = workItem
+        queue.asyncAfter(deadline: .now() + debounceInterval, execute: workItem)
+    }
+}
+
 /// Main application delegate — lifecycle management, config loading, and capture orchestration.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+
+    private enum ReloadTrigger: Equatable {
+        case startup
+        case manual
+        case auto
+    }
 
     // MARK: - Dependencies
 
     private let captureService: CaptureServiceProtocol
     private let storageWriter: StorageWriterProtocol
     private let configLoader: ConfigLoaderProtocol
-    private let unlockObserverFactory: @MainActor () -> UnlockObserving
+    private let unlockObserver: UnlockObserving
     private let dateProvider: DateProviderProtocol
+    private let alertPresenter: AlertPresenting
 
     // MARK: - State
 
     private var config: AppConfig = .default
+    private var configSourcePath: String?
     private var menuBarController: MenuBarController?
-    private var unlockObserver: UnlockObserving?
+    private var configReloadCoordinator: ConfigReloadCoordinating?
 
     // MARK: - Initialization
 
@@ -25,8 +170,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.captureService = CaptureService()
         self.storageWriter = StorageWriter()
         self.configLoader = ConfigLoaderImpl()
-        self.unlockObserverFactory = { UnlockObserver() }
+        self.unlockObserver = UnlockObserver()
         self.dateProvider = SystemDateProvider()
+        self.alertPresenter = NSAlertPresenter()
         super.init()
     }
 
@@ -35,14 +181,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         captureService: CaptureServiceProtocol,
         storageWriter: StorageWriterProtocol,
         configLoader: ConfigLoaderProtocol,
-        unlockObserverFactory: @escaping @MainActor () -> UnlockObserving,
-        dateProvider: DateProviderProtocol = SystemDateProvider()
+        unlockObserver: UnlockObserving,
+        dateProvider: DateProviderProtocol = SystemDateProvider(),
+        alertPresenter: AlertPresenting = NSAlertPresenter()
     ) {
         self.captureService = captureService
         self.storageWriter = storageWriter
         self.configLoader = configLoader
-        self.unlockObserverFactory = unlockObserverFactory
+        self.unlockObserver = unlockObserver
         self.dateProvider = dateProvider
+        self.alertPresenter = alertPresenter
         super.init()
     }
 
@@ -52,7 +200,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.app.info("LoginShot starting up")
 
         // 1. Load configuration
-        reloadConfig()
+        reloadConfig(trigger: .startup)
+
+        let reloadCoordinator = ConfigReloadCoordinator { [weak self] in
+            self?.reloadConfig(trigger: .auto)
+        }
+        reloadCoordinator.bind(configPath: configSourcePath)
+        configReloadCoordinator = reloadCoordinator
 
         // 2. Setup menu bar if enabled
         if config.ui.menuBarIcon {
@@ -62,9 +216,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 3. Setup unlock observer
-        let observer = unlockObserverFactory()
         if config.triggers.onUnlock || config.triggers.onLock {
-            observer.start(debounceSeconds: config.capture.debounceSeconds) { [weak self] event in
+            unlockObserver.start(debounceSeconds: config.capture.debounceSeconds) { [weak self] event in
                 guard let self else { return }
 
                 switch event {
@@ -77,7 +230,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
-        self.unlockObserver = observer
 
         // 4. Fire session-open capture if enabled
         if config.triggers.onSessionOpen {
@@ -88,7 +240,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        unlockObserver?.stop()
+        configReloadCoordinator?.unbind()
+        unlockObserver.stop()
         menuBarController?.teardown()
         Log.app.info("LoginShot shutting down")
     }
@@ -176,8 +329,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Config
 
     func reloadConfig() {
+        reloadConfig(trigger: .manual)
+    }
+
+    private func reloadConfig(trigger: ReloadTrigger) {
         let previousMenuBarEnabled = config.ui.menuBarIcon
-        config = configLoader.load()
+
+        let loadResult = configLoader.loadResult()
+        switch loadResult {
+        case .loaded(let loadedConfig, let sourcePath):
+            config = loadedConfig
+            configSourcePath = sourcePath
+            Log.config.info("Config loaded from \(sourcePath)")
+        case .notFound(let defaults):
+            if trigger == .auto, configSourcePath != nil {
+                Log.config.warning("Config file temporarily unavailable during auto-reload; keeping previous configuration")
+                return
+            }
+            config = defaults
+            configSourcePath = nil
+            Log.config.info("No config file found; using defaults")
+        case .failed(let path, let error):
+            Log.config.error("Config reload failed for \(path): \(error.localizedDescription). Keeping previous valid configuration")
+            if trigger == .manual {
+                alertPresenter.showError(
+                    title: "LoginShot",
+                    message: "Config reload failed:\n\(error.localizedDescription)\n\nKeeping previous valid configuration."
+                )
+            }
+            return
+        }
+
         Log.configureFileLogging(
             enabled: config.logging.enableFileLogging,
             directory: config.logging.directory,
@@ -189,6 +371,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let currentMenuBarEnabled = self.config.ui.menuBarIcon
         if currentMenuBarEnabled != previousMenuBarEnabled {
             Log.config.warning("ui.menuBarIcon changed to \(currentMenuBarEnabled); restart required to apply")
+        }
+
+        configReloadCoordinator?.bind(configPath: configSourcePath)
+
+        if trigger == .manual {
+            alertPresenter.showInfo(title: "LoginShot", message: "Configuration reloaded successfully.")
         }
     }
 
@@ -223,6 +411,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onReloadConfig: { [weak self] in
                 self?.reloadConfig()
             },
+            onEditConfig: { [weak self] in
+                self?.editConfig()
+            },
             onGenerateConfig: { [weak self] in
                 self?.generateSampleConfig()
             },
@@ -247,6 +438,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             NSWorkspace.shared.open(url)
         }
+    }
+
+    private func editConfig() {
+        let path: String
+        if let existingPath = configSourcePath {
+            path = existingPath
+        } else {
+            do {
+                path = try ConfigWriter.writeSampleConfig()
+                configSourcePath = path
+                configReloadCoordinator?.bind(configPath: path)
+                Log.config.info("Created sample config for editing at \(path)")
+            } catch ConfigWriterError.fileAlreadyExists(let existingPath) {
+                path = existingPath
+                configSourcePath = existingPath
+                configReloadCoordinator?.bind(configPath: existingPath)
+            } catch {
+                Log.config.error("Failed to prepare config file for editing: \(error.localizedDescription)")
+                alertPresenter.showError(title: "LoginShot", message: "Failed to open config file:\n\(error.localizedDescription)")
+                return
+            }
+        }
+
+        let url = URL(fileURLWithPath: path)
+        NSWorkspace.shared.open(url)
     }
 
     // MARK: - Filename Generation

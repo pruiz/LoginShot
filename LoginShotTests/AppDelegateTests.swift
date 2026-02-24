@@ -10,6 +10,7 @@ final class AppDelegateTests: XCTestCase {
     nonisolated(unsafe) private var mockConfigLoader: MockConfigLoader!
     nonisolated(unsafe) private var mockUnlockObserver: MockUnlockObserver!
     nonisolated(unsafe) private var mockDateProvider: MockDateProvider!
+    nonisolated(unsafe) private var mockAlertPresenter: MockAlertPresenter!
 
     override func setUp() {
         super.setUp()
@@ -18,6 +19,7 @@ final class AppDelegateTests: XCTestCase {
         mockConfigLoader = MockConfigLoader()
         mockUnlockObserver = MockUnlockObserver()
         mockDateProvider = MockDateProvider(year: 2024, month: 3, day: 15, hour: 10, minute: 30, second: 45)
+        mockAlertPresenter = MockAlertPresenter()
     }
 
     override func tearDown() {
@@ -26,6 +28,7 @@ final class AppDelegateTests: XCTestCase {
         mockConfigLoader = nil
         mockUnlockObserver = nil
         mockDateProvider = nil
+        mockAlertPresenter = nil
         super.tearDown()
     }
 
@@ -37,8 +40,9 @@ final class AppDelegateTests: XCTestCase {
             captureService: mockCaptureService,
             storageWriter: mockStorageWriter,
             configLoader: mockConfigLoader,
-            unlockObserverFactory: { [mockUnlockObserver] in mockUnlockObserver! },
-            dateProvider: mockDateProvider
+            unlockObserver: mockUnlockObserver,
+            dateProvider: mockDateProvider,
+            alertPresenter: mockAlertPresenter
         )
     }
 
@@ -59,6 +63,32 @@ final class AppDelegateTests: XCTestCase {
         delegate.reloadConfig()
 
         XCTAssertEqual(delegate.currentConfig.output.maxWidth, 999)
+    }
+
+    func testManualReloadSuccessShowsInfoAlert() {
+        let delegate = makeAppDelegate()
+        delegate.reloadConfig()
+
+        XCTAssertEqual(mockAlertPresenter.infoCalls.count, 1)
+        XCTAssertTrue(mockAlertPresenter.errorCalls.isEmpty)
+    }
+
+    func testManualReloadFailureKeepsPreviousConfigAndShowsErrorAlert() {
+        var initialConfig = AppConfig.default
+        initialConfig.output.maxWidth = 777
+
+        let delegate = makeAppDelegate(config: initialConfig)
+        delegate.reloadConfig()
+
+        mockConfigLoader.resultToReturn = .failed(
+            path: "/tmp/config.yml",
+            error: NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "invalid yaml"])
+        )
+
+        delegate.reloadConfig()
+
+        XCTAssertEqual(delegate.currentConfig.output.maxWidth, 777)
+        XCTAssertEqual(mockAlertPresenter.errorCalls.count, 1)
     }
 
     func testApplicationStartsObserverWhenLockEnabled() {
@@ -250,5 +280,20 @@ final class AppDelegateTests: XCTestCase {
         // Use current timezone (same as DateFormatter default in makeFilename)
         components.timeZone = TimeZone.current
         return Calendar(identifier: .gregorian).date(from: components)!
+    }
+}
+
+final class MockAlertPresenter: AlertPresenting, @unchecked Sendable {
+    private(set) var infoCalls: [(title: String, message: String)] = []
+    private(set) var errorCalls: [(title: String, message: String)] = []
+
+    @MainActor
+    func showInfo(title: String, message: String) {
+        infoCalls.append((title, message))
+    }
+
+    @MainActor
+    func showError(title: String, message: String) {
+        errorCalls.append((title, message))
     }
 }

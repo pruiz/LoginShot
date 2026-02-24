@@ -224,6 +224,7 @@ When `ui.menuBarIcon` is `true` (the default), LoginShot shows a camera icon in 
 | **Capture Now** | Take a snapshot immediately (tagged as `manual` event) |
 | **Open Output Folder** | Reveal the output directory in Finder |
 | **Open Log** | Open current daily log file (when `logging.enableFileLogging` is true) |
+| **Edit Config** | Open active `config.yml`; if none exists, generate one first |
 | **Reload Config** | Re-read the YAML config file without restarting |
 | **Generate Sample Config** | Write a commented `config.yml` to `~/Library/Application Support/LoginShot/` (will not overwrite an existing file) |
 | **Quit** | Shut down LoginShot |
@@ -244,6 +245,10 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
 - **Tests behave differently than app launch**
   - XCTest runs skip normal `AppDelegate` startup paths to avoid camera permission side effects during tests.
   - This is expected and does not change production capture behavior.
+- **Config reload behavior**
+  - LoginShot watches the active `config.yml` and auto-reloads changes with a short debounce.
+  - If reload fails (invalid YAML/values), the app keeps the previous valid in-memory configuration.
+  - Manual **Reload Config** shows an `NSAlert` for success/failure; auto-reload logs outcomes without popups.
 - **Cloud folder path**
   - Prefer the real local sync path (e.g. `~/Library/CloudStorage/...`) over symlinks.
 
