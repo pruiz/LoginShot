@@ -4,7 +4,7 @@ import XCTest
 final class CaptureMetadataTests: XCTestCase {
 
     func testBuildPopulatesAllFields() {
-        let cameraInfo = CameraInfo(deviceName: "FaceTime HD Camera", position: "front")
+        let cameraInfo = CameraInfo(deviceName: "FaceTime HD Camera", position: "front", uniqueID: "camera-1")
         let metadata = CaptureMetadata.build(
             event: .sessionOpen,
             outputPath: "/tmp/test-session-open.jpg",
@@ -69,7 +69,7 @@ final class CaptureMetadataTests: XCTestCase {
         let metadata = CaptureMetadata.build(
             event: .sessionOpen,
             outputPath: "/tmp/2026-02-22T08-41-10-session-open.jpg",
-            cameraInfo: CameraInfo(deviceName: "FaceTime HD Camera", position: "front"),
+            cameraInfo: CameraInfo(deviceName: "FaceTime HD Camera", position: "front", uniqueID: "camera-1"),
             success: true
         )
 

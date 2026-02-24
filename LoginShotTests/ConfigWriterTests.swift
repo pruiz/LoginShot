@@ -65,6 +65,18 @@ final class ConfigWriterTests: XCTestCase {
 
     // MARK: - sampleYAML
 
+    func testWriteConfigPersistsCameraUniqueID() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.capture.cameraUniqueID = "camera-xyz"
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.capture.cameraUniqueID, "camera-xyz")
+    }
+
     func testSampleYAMLContainsAllSections() {
         let yaml = ConfigWriter.sampleYAML()
 
@@ -83,6 +95,7 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("maxWidth: 1280"), "Missing default maxWidth")
         XCTAssertTrue(yaml.contains("jpegQuality: 0.85"), "Missing default jpegQuality")
         XCTAssertTrue(yaml.contains("debounceSeconds: 3"), "Missing default debounceSeconds")
+        XCTAssertTrue(yaml.contains("cameraUniqueID: null"), "Missing default cameraUniqueID")
         XCTAssertTrue(yaml.contains("onLock: true"), "Missing default onLock")
         XCTAssertTrue(yaml.contains("enableFileLogging: false"), "Missing default file logging toggle")
     }
@@ -102,6 +115,7 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(config.ui.menuBarIcon)
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
+        XCTAssertNil(config.capture.cameraUniqueID)
         XCTAssertFalse(config.logging.enableFileLogging)
     }
 }

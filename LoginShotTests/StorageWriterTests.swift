@@ -82,7 +82,7 @@ final class StorageWriterTests: XCTestCase {
         let metadata = CaptureMetadata.build(
             event: .unlock,
             outputPath: jpegPath,
-            cameraInfo: CameraInfo(deviceName: "Test Camera", position: "front"),
+            cameraInfo: CameraInfo(deviceName: "Test Camera", position: "front", uniqueID: "test-camera"),
             success: true
         )
 

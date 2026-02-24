@@ -35,6 +35,26 @@ enum ConfigWriter {
         return target
     }
 
+    /// Persist config values to YAML, overwriting existing file atomically.
+    @discardableResult
+    static func writeConfig(_ config: AppConfig, to path: String) throws -> String {
+        let dir = (path as NSString).deletingLastPathComponent
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: dir) {
+            try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
+
+        let yaml = serialize(config: config)
+        let tempPath = path + ".tmp-\(UUID().uuidString)"
+        try yaml.write(toFile: tempPath, atomically: true, encoding: .utf8)
+        if fm.fileExists(atPath: path) {
+            try fm.removeItem(atPath: path)
+        }
+        try fm.moveItem(atPath: tempPath, toPath: path)
+        Log.config.info("Wrote config to \(path)")
+        return path
+    }
+
     /// The sample YAML content with comments.
     static func sampleYAML() -> String {
         """
@@ -81,6 +101,9 @@ enum ConfigWriter {
           # Prevents duplicate captures from multiple OS notifications.
           debounceSeconds: 3
 
+          # Camera unique identifier. null = automatic/default camera.
+          cameraUniqueID: null
+
         logging:
           # Write app logs to files in addition to macOS unified logging.
           # Default false keeps logging fully OS-managed.
@@ -97,6 +120,47 @@ enum ConfigWriter {
 
           # Trace|Debug|Information|Warning|Error|Critical|None
           level: "Information"
+        """
+    }
+
+    private static func serialize(config: AppConfig) -> String {
+        let cameraUniqueID: String
+        if let configuredID = config.capture.cameraUniqueID {
+            let escaped = configuredID.replacingOccurrences(of: "\"", with: "\\\"")
+            cameraUniqueID = "\"\(escaped)\""
+        } else {
+            cameraUniqueID = "null"
+        }
+
+        return """
+        output:
+          directory: "\(config.output.directory)"
+          format: "\(config.output.format)"
+          maxWidth: \(config.output.maxWidth)
+          jpegQuality: \(String(format: "%.2f", config.output.jpegQuality))
+
+        triggers:
+          onSessionOpen: \(config.triggers.onSessionOpen)
+          onUnlock: \(config.triggers.onUnlock)
+          onLock: \(config.triggers.onLock)
+
+        metadata:
+          writeSidecar: \(config.metadata.writeSidecar)
+
+        ui:
+          menuBarIcon: \(config.ui.menuBarIcon)
+
+        capture:
+          silent: \(config.capture.silent)
+          debounceSeconds: \(config.capture.debounceSeconds)
+          cameraUniqueID: \(cameraUniqueID)
+
+        logging:
+          enableFileLogging: \(config.logging.enableFileLogging)
+          directory: "\(config.logging.directory)"
+          retentionDays: \(config.logging.retentionDays)
+          cleanupIntervalHours: \(config.logging.cleanupIntervalHours)
+          level: "\(config.logging.level)"
         """
     }
 }

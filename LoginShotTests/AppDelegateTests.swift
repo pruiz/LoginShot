@@ -133,6 +133,7 @@ final class AppDelegateTests: XCTestCase {
         var config = AppConfig.default
         config.output.maxWidth = 800
         config.output.jpegQuality = 0.7
+        config.capture.cameraUniqueID = "camera-2"
 
         let delegate = makeAppDelegate(config: config)
         delegate.reloadConfig()
@@ -143,6 +144,7 @@ final class AppDelegateTests: XCTestCase {
 
         XCTAssertEqual(mockCaptureService.lastMaxWidth, 800)
         XCTAssertEqual(mockCaptureService.lastQuality, 0.7)
+        XCTAssertEqual(mockCaptureService.lastCameraUniqueID, "camera-2")
     }
 
     func testHandleCaptureEventCallsStorageWriter() async throws {

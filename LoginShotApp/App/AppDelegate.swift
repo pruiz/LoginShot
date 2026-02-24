@@ -266,7 +266,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // 1. Capture JPEG from camera
                 let result = try await captureService.captureJPEG(
                     maxWidth: config.output.maxWidth,
-                    quality: config.output.jpegQuality
+                    quality: config.output.jpegQuality,
+                    cameraUniqueID: config.capture.cameraUniqueID
                 )
 
                 // 2. Build metadata
@@ -419,6 +420,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onOpenLog: { [weak self] in
                 self?.openCurrentLogFile()
+            },
+            cameraMenuStateProvider: { [weak self] in
+                self?.cameraMenuState() ?? MenuBarController.CameraMenuState(selectedUniqueID: nil, devices: [])
+            },
+            onSelectCamera: { [weak self] uniqueID in
+                self?.selectCamera(uniqueID: uniqueID)
+            },
+            onVerifyCamera: { [weak self] in
+                self?.verifySelectedCamera()
             }
         )
         controller.setup()
@@ -463,6 +473,71 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let url = URL(fileURLWithPath: path)
         NSWorkspace.shared.open(url)
+    }
+
+    private func cameraMenuState() -> MenuBarController.CameraMenuState {
+        let devices = captureService.listCameras().sorted {
+            $0.deviceName.localizedCaseInsensitiveCompare($1.deviceName) == .orderedAscending
+        }
+
+        return MenuBarController.CameraMenuState(
+            selectedUniqueID: config.capture.cameraUniqueID,
+            devices: devices
+        )
+    }
+
+    private func selectCamera(uniqueID: String?) {
+        let previousID = config.capture.cameraUniqueID
+        config.capture.cameraUniqueID = uniqueID
+
+        do {
+            try persistCurrentConfig()
+            let label = uniqueID ?? "auto"
+            Log.config.info("Updated camera selection to \(label)")
+        } catch {
+            config.capture.cameraUniqueID = previousID
+            Log.config.error("Failed to persist camera selection: \(error.localizedDescription)")
+            alertPresenter.showError(
+                title: "LoginShot",
+                message: "Failed to save camera selection:\n\(error.localizedDescription)"
+            )
+        }
+    }
+
+    private func verifySelectedCamera() {
+        let selectedID = config.capture.cameraUniqueID
+        Task { @MainActor [captureService, config] in
+            do {
+                _ = try await captureService.captureJPEG(
+                    maxWidth: config.output.maxWidth,
+                    quality: config.output.jpegQuality,
+                    cameraUniqueID: selectedID
+                )
+                alertPresenter.showInfo(title: "LoginShot", message: "Camera verification succeeded.")
+            } catch {
+                alertPresenter.showError(
+                    title: "LoginShot",
+                    message: "Camera verification failed:\n\(error.localizedDescription)"
+                )
+            }
+        }
+    }
+
+    private func persistCurrentConfig() throws {
+        if configSourcePath == nil {
+            configSourcePath = try ConfigWriter.writeSampleConfig()
+        }
+
+        guard let configSourcePath else {
+            throw NSError(
+                domain: "LoginShot.Config",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Missing config source path"]
+            )
+        }
+
+        _ = try ConfigWriter.writeConfig(config, to: configSourcePath)
+        configReloadCoordinator?.bind(configPath: configSourcePath)
     }
 
     // MARK: - Filename Generation
