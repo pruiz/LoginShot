@@ -233,6 +233,7 @@ When `ui.menuBarIcon` is `true` (the default), LoginShot shows a camera icon in 
 |-----------|-------------|
 | **Capture Now** | Take a snapshot immediately (tagged as `manual` event) |
 | **Open Output Folder** | Reveal the output directory in Finder |
+| **Start at Login** | Enable/disable auto-start for current user by managing the LaunchAgent |
 | **Camera** | Select `Auto` or a specific camera by unique ID, and verify selected camera |
 | **Open Log** | Open current daily log file (when `logging.enableFileLogging` is true) |
 | **Edit Config** | Open active `config.yml`; if none exists, generate one first |
@@ -241,6 +242,8 @@ When `ui.menuBarIcon` is `true` (the default), LoginShot shows a camera icon in 
 | **Quit** | Shut down LoginShot |
 
 Set `ui.menuBarIcon: false` in config for fully headless operation. Changing this setting requires an app restart to take effect.
+
+`Start at Login` uses the same LaunchAgent label (`dev.pruiz.LoginShot`) as the install/uninstall scripts, so script-based setup remains a manual fallback.
 
 ## Troubleshooting
 - **No camera prompt / capture fails**

@@ -11,6 +11,7 @@ final class AppDelegateTests: XCTestCase {
     nonisolated(unsafe) private var mockUnlockObserver: MockUnlockObserver!
     nonisolated(unsafe) private var mockDateProvider: MockDateProvider!
     nonisolated(unsafe) private var mockAlertPresenter: MockAlertPresenter!
+    nonisolated(unsafe) private var mockStartupRegistration: MockStartupRegistrationService!
 
     override func setUp() {
         super.setUp()
@@ -20,6 +21,7 @@ final class AppDelegateTests: XCTestCase {
         mockUnlockObserver = MockUnlockObserver()
         mockDateProvider = MockDateProvider(year: 2024, month: 3, day: 15, hour: 10, minute: 30, second: 45)
         mockAlertPresenter = MockAlertPresenter()
+        mockStartupRegistration = MockStartupRegistrationService()
     }
 
     override func tearDown() {
@@ -29,6 +31,7 @@ final class AppDelegateTests: XCTestCase {
         mockUnlockObserver = nil
         mockDateProvider = nil
         mockAlertPresenter = nil
+        mockStartupRegistration = nil
         super.tearDown()
     }
 
@@ -42,7 +45,8 @@ final class AppDelegateTests: XCTestCase {
             configLoader: mockConfigLoader,
             unlockObserver: mockUnlockObserver,
             dateProvider: mockDateProvider,
-            alertPresenter: mockAlertPresenter
+            alertPresenter: mockAlertPresenter,
+            startupRegistration: mockStartupRegistration
         )
     }
 
@@ -244,6 +248,37 @@ final class AppDelegateTests: XCTestCase {
         // Both capture and storage were attempted
         XCTAssertEqual(mockCaptureService.captureCallCount, 1)
         XCTAssertEqual(mockStorageWriter.writeCallCount, 2)
+    }
+
+    func testSetStartAtLoginEnabledCallsRegistrationService() {
+        let delegate = makeAppDelegate()
+
+        delegate.setStartAtLoginEnabled(true)
+
+        XCTAssertEqual(mockStartupRegistration.setEnabledCallCount, 1)
+        XCTAssertEqual(mockStartupRegistration.lastSetEnabledValue, true)
+        XCTAssertTrue(mockAlertPresenter.errorCalls.isEmpty)
+    }
+
+    func testSetStartAtLoginEnabledShowsErrorAlertOnFailure() {
+        mockStartupRegistration.setEnabledError = NSError(
+            domain: "test",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "permission denied"]
+        )
+        let delegate = makeAppDelegate()
+
+        delegate.setStartAtLoginEnabled(true)
+
+        XCTAssertEqual(mockStartupRegistration.setEnabledCallCount, 1)
+        XCTAssertEqual(mockAlertPresenter.errorCalls.count, 1)
+    }
+
+    func testIsStartAtLoginEnabledReflectsRegistrationServiceState() {
+        mockStartupRegistration.enabled = true
+        let delegate = makeAppDelegate()
+
+        XCTAssertTrue(delegate.isStartAtLoginEnabled())
     }
 
     // MARK: - Filename Generation Tests

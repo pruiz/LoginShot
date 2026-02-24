@@ -17,10 +17,14 @@ final class MenuBarController: NSObject {
     private let onEditConfig: @MainActor () -> Void
     private let onGenerateConfig: @MainActor () -> Void
     private let onOpenLog: @MainActor () -> Void
+    private let startupAtLoginEnabledProvider: @MainActor () -> Bool
+    private let onToggleStartupAtLogin: @MainActor (Bool) -> Void
     private let cameraMenuStateProvider: @MainActor () -> CameraMenuState
     private let onSelectCamera: @MainActor (String?) -> Void
     private let onVerifyCamera: @MainActor () -> Void
     private let outputDirectoryProvider: @MainActor () -> String
+    private weak var startupAtLoginItem: NSMenuItem?
+    private weak var rootMenu: NSMenu?
 
     init(
         outputDirectoryProvider: @escaping @MainActor () -> String,
@@ -29,6 +33,8 @@ final class MenuBarController: NSObject {
         onEditConfig: @escaping @MainActor () -> Void,
         onGenerateConfig: @escaping @MainActor () -> Void,
         onOpenLog: @escaping @MainActor () -> Void,
+        startupAtLoginEnabledProvider: @escaping @MainActor () -> Bool,
+        onToggleStartupAtLogin: @escaping @MainActor (Bool) -> Void,
         cameraMenuStateProvider: @escaping @MainActor () -> CameraMenuState,
         onSelectCamera: @escaping @MainActor (String?) -> Void,
         onVerifyCamera: @escaping @MainActor () -> Void
@@ -39,6 +45,8 @@ final class MenuBarController: NSObject {
         self.onEditConfig = onEditConfig
         self.onGenerateConfig = onGenerateConfig
         self.onOpenLog = onOpenLog
+        self.startupAtLoginEnabledProvider = startupAtLoginEnabledProvider
+        self.onToggleStartupAtLogin = onToggleStartupAtLogin
         self.cameraMenuStateProvider = cameraMenuStateProvider
         self.onSelectCamera = onSelectCamera
         self.onVerifyCamera = onVerifyCamera
@@ -57,6 +65,8 @@ final class MenuBarController: NSObject {
         }
 
         let menu = NSMenu(title: "LoginShot")
+        menu.delegate = self
+        self.rootMenu = menu
 
         let captureItem = NSMenuItem(
             title: "Capture Now",
@@ -73,6 +83,16 @@ final class MenuBarController: NSObject {
         )
         openItem.target = self
         menu.addItem(openItem)
+
+        let startupAtLoginItem = NSMenuItem(
+            title: "Start at Login",
+            action: #selector(toggleStartupAtLoginAction(_:)),
+            keyEquivalent: ""
+        )
+        startupAtLoginItem.target = self
+        menu.addItem(startupAtLoginItem)
+        self.startupAtLoginItem = startupAtLoginItem
+        refreshStartupAtLoginState()
 
         let cameraItem = NSMenuItem(title: "Camera", action: nil, keyEquivalent: "")
         let cameraSubmenu = NSMenu(title: "Camera")
@@ -175,6 +195,13 @@ final class MenuBarController: NSObject {
         onOpenLog()
     }
 
+    @objc private func toggleStartupAtLoginAction(_ sender: NSMenuItem) {
+        let shouldEnable = sender.state != NSControl.StateValue.on
+        Log.ui.info("Menu: Start at Login \(shouldEnable)")
+        onToggleStartupAtLogin(shouldEnable)
+        refreshStartupAtLoginState()
+    }
+
     @objc private func selectCameraAction(_ sender: NSMenuItem) {
         let uniqueID = sender.representedObject as? String
         Log.ui.info("Menu: Select Camera \(uniqueID ?? "auto")")
@@ -223,11 +250,22 @@ final class MenuBarController: NSObject {
         verifyItem.target = self
         submenu.addItem(verifyItem)
     }
+
+    private func refreshStartupAtLoginState() {
+        guard let startupAtLoginItem else { return }
+        startupAtLoginItem.state = startupAtLoginEnabledProvider() ? NSControl.StateValue.on : NSControl.StateValue.off
+    }
 }
 
 extension MenuBarController: NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
-        guard menu == cameraSubmenu else { return }
-        rebuildCameraSubmenu(menu)
+        if menu == cameraSubmenu {
+            rebuildCameraSubmenu(menu)
+            return
+        }
+
+        if menu == rootMenu {
+            refreshStartupAtLoginState()
+        }
     }
 }

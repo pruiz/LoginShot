@@ -38,6 +38,9 @@
 		BB000000000000000000002D /* MockClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002D /* MockClock.swift */; };
 		BB000000000000000000002E /* MockConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002E /* MockConfigLoader.swift */; };
 		BB000000000000000000002F /* MockUnlockObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000002F /* MockUnlockObserver.swift */; };
+		BB0000000000000000000030 /* StartupRegistrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000030 /* StartupRegistrationService.swift */; };
+		BB0000000000000000000031 /* StartupRegistrationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000031 /* StartupRegistrationServiceTests.swift */; };
+		BB0000000000000000000032 /* MockStartupRegistrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000000000000000000032 /* MockStartupRegistrationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +87,9 @@
 		FF000000000000000000002D /* MockClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockClock.swift; sourceTree = "<group>"; };
 		FF000000000000000000002E /* MockConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockConfigLoader.swift; sourceTree = "<group>"; };
 		FF000000000000000000002F /* MockUnlockObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockUnlockObserver.swift; sourceTree = "<group>"; };
+		FF0000000000000000000030 /* StartupRegistrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRegistrationService.swift; sourceTree = "<group>"; };
+		FF0000000000000000000031 /* StartupRegistrationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupRegistrationServiceTests.swift; sourceTree = "<group>"; };
+		FF0000000000000000000032 /* MockStartupRegistrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockStartupRegistrationService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +127,7 @@
 				AA0000000000000000000003 /* App */,
 				AA0000000000000000000004 /* Capture */,
 				AA0000000000000000000005 /* Config */,
+				AA000000000000000000000D /* Startup */,
 				AA0000000000000000000006 /* Storage */,
 				AA0000000000000000000007 /* Triggers */,
 				AA0000000000000000000008 /* Util */,
@@ -213,6 +220,7 @@
 				FF0000000000000000000029 /* DebouncerDeterministicTests.swift */,
 				FF0000000000000000000024 /* DebouncerTests.swift */,
 				FF0000000000000000000023 /* FilenameTests.swift */,
+				FF0000000000000000000031 /* StartupRegistrationServiceTests.swift */,
 				FF0000000000000000000026 /* StorageWriterTests.swift */,
 				FF000000000000000000002A /* UnlockObserverTests.swift */,
 				AA000000000000000000000C /* Mocks */,
@@ -226,10 +234,19 @@
 				FF000000000000000000002B /* MockCaptureService.swift */,
 				FF000000000000000000002D /* MockClock.swift */,
 				FF000000000000000000002E /* MockConfigLoader.swift */,
+				FF0000000000000000000032 /* MockStartupRegistrationService.swift */,
 				FF000000000000000000002C /* MockStorageWriter.swift */,
 				FF000000000000000000002F /* MockUnlockObserver.swift */,
 			);
 			path = Mocks;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000000D /* Startup */ = {
+			isa = PBXGroup;
+			children = (
+				FF0000000000000000000030 /* StartupRegistrationService.swift */,
+			);
+			path = Startup;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -333,6 +350,7 @@
 				BB000000000000000000000E /* Debouncer.swift in Sources */,
 				BB0000000000000000000010 /* ConfigWriter.swift in Sources */,
 				BB0000000000000000000011 /* Clock.swift in Sources */,
+				BB0000000000000000000030 /* StartupRegistrationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,6 +373,8 @@
 				BB000000000000000000002D /* MockClock.swift in Sources */,
 				BB000000000000000000002E /* MockConfigLoader.swift in Sources */,
 				BB000000000000000000002F /* MockUnlockObserver.swift in Sources */,
+				BB0000000000000000000031 /* StartupRegistrationServiceTests.swift in Sources */,
+				BB0000000000000000000032 /* MockStartupRegistrationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
