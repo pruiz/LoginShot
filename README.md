@@ -16,9 +16,12 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
   - **unlock** (session becomes active/unlocked)
   - **lock** (best-effort on macOS)
 - One-shot snapshot using AVFoundation
+- Watermark overlay on captured images (enabled by default)
+- Camera selection by unique ID with menu verification flow
 - Store image + sidecar metadata file (JSON)
 - YAML configuration file
 - Optional menu bar icon (can be disabled by config)
+- In-app **Start at Login** toggle (LaunchAgent-backed)
 
 ### Not included (for now)
 - Cloud upload via Dropbox/Google Drive APIs
@@ -87,16 +90,22 @@ Workflow file: `.github/workflows/release.yml`
    You can also generate a sample config from the menu bar (see Menu Bar below).
 
 5. Enable autostart on login:
-   - Install the user LaunchAgent:
-     ```bash
-     ./LaunchAgent/install.sh
-     ```
+   - Preferred: use menu bar **Start at Login** toggle after first app run.
+   - Manual/script fallback: install the user LaunchAgent:
+      ```bash
+      ./LaunchAgent/install.sh
+      ```
    - If the app is not in `/Applications/LoginShot.app` or `~/Applications/LoginShot.app`, pass an explicit path:
      ```bash
      ./LaunchAgent/install.sh --app "/path/to/LoginShot.app"
      ```
 
 ## LaunchAgent Autostart
+
+Preferred path for interactive installs: use menu bar **Start at Login**.
+This updates the same LaunchAgent label used by the scripts (`dev.pruiz.LoginShot`).
+
+Script-based setup is still useful for headless/bootstrap automation.
 
 Install for current user:
 
@@ -245,6 +254,23 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
 
 `Start at Login` uses the same LaunchAgent label (`dev.pruiz.LoginShot`) as the install/uninstall scripts, so script-based setup remains a manual fallback.
 
+## Reporting Issues
+
+Please use the GitHub issue templates for bug reports and feature requests so diagnostics are complete.
+
+For bug reports, include:
+- macOS version/build
+- LoginShot version/build
+- trigger type (`session-open`, `unlock`, `lock`, or `manual`)
+- relevant `config.yml` excerpt (redact sensitive paths/usernames if needed)
+- relevant logs (unified log and optional file logs if enabled)
+
+Unified log example:
+
+```bash
+log show --last 10m --predicate 'subsystem == "dev.pruiz.LoginShot"'
+```
+
 ## Troubleshooting
 - **No camera prompt / capture fails**
   - System Settings → Privacy & Security → Camera → enable LoginShot.
@@ -273,24 +299,24 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
 - v3: optional collector service
 - v4: optional face verification + alerting
 
-## Feature Parity Roadmap (macOS vs .NET)
+## Feature Parity Progress (macOS vs .NET)
 
-Planned phases to align macOS behavior with `LoginShot.DotNet` while preserving platform-specific constraints:
+Completed phases aligned with `LoginShot.DotNet` while preserving platform-specific constraints:
 
-1. **Phase 1 - Reliability + observability parity**
+1. **Phase 1 - Reliability + observability parity** (completed)
    - Failure sidecar persistence on capture errors (`status` + `failure` fields).
    - Optional file logging configuration (`logging.*`) with retention and `Open Log` menu action.
    - Default behavior remains macOS unified logging (`os.Logger`); file logging is opt-in.
-2. **Phase 2 - Trigger parity**
+2. **Phase 2 - Trigger parity** (completed)
    - Add best-effort `lock` trigger with independent debounce behavior.
-3. **Phase 3 - Config UX parity**
+3. **Phase 3 - Config UX parity** (completed)
    - File-watch auto-reload with debounce and last-known-good fallback.
    - Add `Edit Config` tray action.
-4. **Phase 4 - Camera selection parity**
+4. **Phase 4 - Camera selection parity** (completed)
    - Configurable camera selection plus tray verification flow.
-5. **Phase 5 - Watermark parity**
+5. **Phase 5 - Watermark parity** (completed)
    - Add configurable watermarking (enabled by default for parity).
-6. **Phase 6 - Startup UX parity**
+6. **Phase 6 - Startup UX parity** (completed)
    - In-app toggle for start-after-login, keeping LaunchAgent scripts as manual fallback.
 
 ## Security notes
