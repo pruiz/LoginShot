@@ -124,18 +124,16 @@ enum ConfigWriter {
     }
 
     private static func serialize(config: AppConfig) -> String {
-        let cameraUniqueID: String
-        if let configuredID = config.capture.cameraUniqueID {
-            let escaped = configuredID.replacingOccurrences(of: "\"", with: "\\\"")
-            cameraUniqueID = "\"\(escaped)\""
-        } else {
-            cameraUniqueID = "null"
-        }
+        let cameraUniqueID = yamlScalarOrNull(config.capture.cameraUniqueID)
+        let outputDirectory = yamlQuoted(config.output.directory)
+        let outputFormat = yamlQuoted(config.output.format)
+        let loggingDirectory = yamlQuoted(config.logging.directory)
+        let loggingLevel = yamlQuoted(config.logging.level)
 
         return """
         output:
-          directory: "\(config.output.directory)"
-          format: "\(config.output.format)"
+          directory: \(outputDirectory)
+          format: \(outputFormat)
           maxWidth: \(config.output.maxWidth)
           jpegQuality: \(String(format: "%.2f", config.output.jpegQuality))
 
@@ -157,11 +155,26 @@ enum ConfigWriter {
 
         logging:
           enableFileLogging: \(config.logging.enableFileLogging)
-          directory: "\(config.logging.directory)"
+          directory: \(loggingDirectory)
           retentionDays: \(config.logging.retentionDays)
           cleanupIntervalHours: \(config.logging.cleanupIntervalHours)
-          level: "\(config.logging.level)"
+          level: \(loggingLevel)
         """
+    }
+
+    private static func yamlScalarOrNull(_ value: String?) -> String {
+        guard let value else { return "null" }
+        return yamlQuoted(value)
+    }
+
+    private static func yamlQuoted(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\t", with: "\\t")
+        return "\"\(escaped)\""
     }
 }
 

@@ -506,7 +506,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func verifySelectedCamera() {
         let selectedID = config.capture.cameraUniqueID
-        Task { @MainActor [captureService, config] in
+        Task { @MainActor [captureService, config, alertPresenter] in
             do {
                 _ = try await captureService.captureJPEG(
                     maxWidth: config.output.maxWidth,

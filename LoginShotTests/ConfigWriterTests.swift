@@ -77,6 +77,20 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertEqual(parsed.capture.cameraUniqueID, "camera-xyz")
     }
 
+    func testWriteConfigEscapesQuotedPaths() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.output.directory = #"~/Pictures/LoginShot "quoted""#
+        config.logging.directory = #"~/Library/Logs/LoginShot "quoted""#
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.output.directory, (config.output.directory as NSString).expandingTildeInPath)
+        XCTAssertEqual(parsed.logging.directory, (config.logging.directory as NSString).expandingTildeInPath)
+    }
+
     func testSampleYAMLContainsAllSections() {
         let yaml = ConfigWriter.sampleYAML()
 
