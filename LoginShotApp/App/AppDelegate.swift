@@ -267,7 +267,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let result = try await captureService.captureJPEG(
                     maxWidth: config.output.maxWidth,
                     quality: config.output.jpegQuality,
-                    cameraUniqueID: config.capture.cameraUniqueID
+                    cameraUniqueID: config.capture.cameraUniqueID,
+                    watermarkEnabled: config.watermark.enabled,
+                    watermarkFormat: config.watermark.format,
+                    hostname: ProcessInfo.processInfo.hostName
                 )
 
                 // 2. Build metadata
@@ -511,7 +514,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 _ = try await captureService.captureJPEG(
                     maxWidth: config.output.maxWidth,
                     quality: config.output.jpegQuality,
-                    cameraUniqueID: selectedID
+                    cameraUniqueID: selectedID,
+                    watermarkEnabled: config.watermark.enabled,
+                    watermarkFormat: config.watermark.format,
+                    hostname: ProcessInfo.processInfo.hostName
                 )
                 alertPresenter.showInfo(title: "LoginShot", message: "Camera verification succeeded.")
             } catch {

@@ -92,6 +92,7 @@ enum ConfigLoader {
         let uiDict = root["ui"] as? [String: Any] ?? [:]
         let captureDict = root["capture"] as? [String: Any] ?? [:]
         let loggingDict = root["logging"] as? [String: Any] ?? [:]
+        let watermarkDict = root["watermark"] as? [String: Any] ?? [:]
 
         let output = AppConfig.OutputConfig(
             directory: expandPath(outputDict["directory"] as? String ?? "~/Pictures/LoginShot"),
@@ -128,13 +129,19 @@ enum ConfigLoader {
             level: loggingDict["level"] as? String ?? AppConfig.LoggingConfig.default.level
         )
 
+        let watermark = AppConfig.WatermarkConfig(
+            enabled: watermarkDict["enabled"] as? Bool ?? AppConfig.WatermarkConfig.default.enabled,
+            format: watermarkDict["format"] as? String ?? AppConfig.WatermarkConfig.default.format
+        )
+
         return AppConfig(
             output: output,
             triggers: triggers,
             metadata: metadata,
             ui: ui,
             capture: capture,
-            logging: logging
+            logging: logging,
+            watermark: watermark
         )
     }
 

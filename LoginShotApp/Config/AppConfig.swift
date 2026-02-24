@@ -9,6 +9,7 @@ struct AppConfig: Sendable {
     var ui: UIConfig
     var capture: CaptureConfig
     var logging: LoggingConfig
+    var watermark: WatermarkConfig
 
     struct OutputConfig: Sendable {
         var directory: String
@@ -74,13 +75,26 @@ struct AppConfig: Sendable {
         )
     }
 
+    struct WatermarkConfig: Sendable {
+        var enabled: Bool
+        var format: String
+
+        static let defaultFormat = "yyyy-MM-dd HH:mm:ss zzz"
+
+        static let `default` = WatermarkConfig(
+            enabled: true,
+            format: defaultFormat
+        )
+    }
+
     static let `default` = AppConfig(
         output: .default,
         triggers: .default,
         metadata: .default,
         ui: .default,
         capture: .default,
-        logging: .default
+        logging: .default,
+        watermark: .default
     )
 
     /// Validate and clamp config values to acceptable ranges.
@@ -136,6 +150,11 @@ struct AppConfig: Sendable {
         if config.logging.level.isEmpty {
             Log.config.warning("logging.level is empty; setting to Information")
             config.logging.level = "Information"
+        }
+
+        if config.watermark.format.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Log.config.warning("watermark.format is empty; setting default format")
+            config.watermark.format = AppConfig.WatermarkConfig.defaultFormat
         }
 
         return config

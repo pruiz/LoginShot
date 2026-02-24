@@ -120,6 +120,13 @@ enum ConfigWriter {
 
           # Trace|Debug|Information|Warning|Error|Critical|None
           level: "Information"
+
+        watermark:
+          # Watermark captures with hostname and timestamp.
+          enabled: true
+
+          # Date format used in watermark text.
+          format: "yyyy-MM-dd HH:mm:ss zzz"
         """
     }
 
@@ -129,6 +136,7 @@ enum ConfigWriter {
         let outputFormat = yamlQuoted(config.output.format)
         let loggingDirectory = yamlQuoted(config.logging.directory)
         let loggingLevel = yamlQuoted(config.logging.level)
+        let watermarkFormat = yamlQuoted(config.watermark.format)
 
         return """
         output:
@@ -159,6 +167,10 @@ enum ConfigWriter {
           retentionDays: \(config.logging.retentionDays)
           cleanupIntervalHours: \(config.logging.cleanupIntervalHours)
           level: \(loggingLevel)
+
+        watermark:
+          enabled: \(config.watermark.enabled)
+          format: \(watermarkFormat)
         """
     }
 
