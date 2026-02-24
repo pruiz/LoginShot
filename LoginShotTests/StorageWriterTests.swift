@@ -27,7 +27,8 @@ final class StorageWriterTests: XCTestCase {
         let metadata = CaptureMetadata.build(
             event: .sessionOpen,
             outputPath: (tempDir as NSString).appendingPathComponent("test-session-open.jpg"),
-            cameraInfo: .unknown
+            cameraInfo: .unknown,
+            success: true
         )
 
         try await writer.writeCapture(
@@ -53,7 +54,8 @@ final class StorageWriterTests: XCTestCase {
         let metadata = CaptureMetadata.build(
             event: .unlock,
             outputPath: jpegPath,
-            cameraInfo: .unknown
+            cameraInfo: .unknown,
+            success: true
         )
 
         let testData = Data(repeating: 0xAB, count: 1024)
@@ -80,7 +82,8 @@ final class StorageWriterTests: XCTestCase {
         let metadata = CaptureMetadata.build(
             event: .unlock,
             outputPath: jpegPath,
-            cameraInfo: CameraInfo(deviceName: "Test Camera", position: "front")
+            cameraInfo: CameraInfo(deviceName: "Test Camera", position: "front"),
+            success: true
         )
 
         try await writer.writeCapture(
@@ -110,7 +113,8 @@ final class StorageWriterTests: XCTestCase {
         let metadata = CaptureMetadata.build(
             event: .manual,
             outputPath: jpegPath,
-            cameraInfo: .unknown
+            cameraInfo: .unknown,
+            success: true
         )
 
         try await writer.writeCapture(
@@ -123,5 +127,39 @@ final class StorageWriterTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: jpegPath))
         XCTAssertFalse(FileManager.default.fileExists(atPath: jsonPath),
                        "JSON sidecar should NOT be written when writeSidecar=false")
+    }
+
+    func testWritesFailureSidecarEvenWhenDisabled() async throws {
+        var config = AppConfig.default
+        config.output.directory = tempDir
+        config.metadata.writeSidecar = false
+
+        let jpegPath = (tempDir as NSString).appendingPathComponent("test-failure.jpg")
+        let jsonPath = (tempDir as NSString).appendingPathComponent("test-failure.json")
+        let writer = StorageWriter()
+        let metadata = CaptureMetadata.build(
+            event: .unlock,
+            outputPath: jpegPath,
+            cameraInfo: .unknown,
+            success: false,
+            failure: CaptureMetadata.FailureInfo(reason: "camera_capture_failed", message: "camera unavailable")
+        )
+
+        try await writer.writeCapture(
+            event: .unlock,
+            jpegData: nil,
+            metadata: metadata,
+            config: config
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: jpegPath),
+                       "No image should be written for a failure-only persistence")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: jsonPath),
+                      "Failure sidecar should always be written")
+
+        let jsonData = try Data(contentsOf: URL(fileURLWithPath: jsonPath))
+        let decoded = try JSONDecoder().decode(CaptureMetadata.self, from: jsonData)
+        XCTAssertEqual(decoded.status, "failure")
+        XCTAssertEqual(decoded.failure?.reason, "camera_capture_failed")
     }
 }

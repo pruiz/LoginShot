@@ -9,18 +9,21 @@ final class MenuBarController: NSObject {
     private let onCaptureNow: @MainActor () -> Void
     private let onReloadConfig: @MainActor () -> Void
     private let onGenerateConfig: @MainActor () -> Void
+    private let onOpenLog: @MainActor () -> Void
     private let outputDirectoryProvider: @MainActor () -> String
 
     init(
         outputDirectoryProvider: @escaping @MainActor () -> String,
         onCaptureNow: @escaping @MainActor () -> Void,
         onReloadConfig: @escaping @MainActor () -> Void,
-        onGenerateConfig: @escaping @MainActor () -> Void
+        onGenerateConfig: @escaping @MainActor () -> Void,
+        onOpenLog: @escaping @MainActor () -> Void
     ) {
         self.outputDirectoryProvider = outputDirectoryProvider
         self.onCaptureNow = onCaptureNow
         self.onReloadConfig = onReloadConfig
         self.onGenerateConfig = onGenerateConfig
+        self.onOpenLog = onOpenLog
         super.init()
     }
 
@@ -71,6 +74,14 @@ final class MenuBarController: NSObject {
         generateItem.target = self
         menu.addItem(generateItem)
 
+        let openLogItem = NSMenuItem(
+            title: "Open Log",
+            action: #selector(openLogAction(_:)),
+            keyEquivalent: ""
+        )
+        openLogItem.target = self
+        menu.addItem(openLogItem)
+
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
@@ -117,6 +128,11 @@ final class MenuBarController: NSObject {
     @objc private func generateConfigAction(_ sender: Any?) {
         Log.ui.info("Menu: Generate Sample Config")
         onGenerateConfig()
+    }
+
+    @objc private func openLogAction(_ sender: Any?) {
+        Log.ui.info("Menu: Open Log")
+        onOpenLog()
     }
 
     @objc private func quitAction(_ sender: Any?) {

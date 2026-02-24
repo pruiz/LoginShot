@@ -61,6 +61,30 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(delegate.currentConfig.output.maxWidth, 999)
     }
 
+    func testApplicationStartsObserverWhenLockEnabled() {
+        var config = AppConfig.default
+        config.triggers.onSessionOpen = false
+        config.triggers.onUnlock = false
+        config.triggers.onLock = true
+
+        let delegate = makeAppDelegate(config: config)
+        delegate.applicationDidFinishLaunching(Notification(name: Notification.Name("didFinishLaunching")))
+
+        XCTAssertTrue(mockUnlockObserver.startCalled)
+    }
+
+    func testApplicationDoesNotStartObserverWhenUnlockAndLockDisabled() {
+        var config = AppConfig.default
+        config.triggers.onSessionOpen = false
+        config.triggers.onUnlock = false
+        config.triggers.onLock = false
+
+        let delegate = makeAppDelegate(config: config)
+        delegate.applicationDidFinishLaunching(Notification(name: Notification.Name("didFinishLaunching")))
+
+        XCTAssertFalse(mockUnlockObserver.startCalled)
+    }
+
     // MARK: - Capture Pipeline Tests
 
     func testHandleCaptureEventCallsCaptureService() async throws {
@@ -113,6 +137,18 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(mockStorageWriter.lastEvent, .unlock)
     }
 
+    func testHandleCaptureEventSupportsLock() async throws {
+        let delegate = makeAppDelegate()
+        delegate.reloadConfig()
+
+        delegate.handleCaptureEvent(.lock)
+
+        try await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertEqual(mockStorageWriter.lastEvent, .lock)
+        XCTAssertTrue(mockStorageWriter.lastMetadata?.outputPath?.contains("-lock.jpg") == true)
+    }
+
     func testHandleCaptureEventPassesJpegDataToStorage() async throws {
         let testData = Data([0xAB, 0xCD, 0xEF])
         mockCaptureService.succeedWith(jpegData: testData)
@@ -138,7 +174,7 @@ final class AppDelegateTests: XCTestCase {
         let metadata = mockStorageWriter.lastMetadata
         XCTAssertNotNil(metadata)
         // The filename should contain the fixed date from MockDateProvider
-        XCTAssertTrue(metadata!.outputPath.contains("2024-03-15T10-30-45"))
+        XCTAssertTrue(metadata?.outputPath?.contains("2024-03-15T10-30-45") == true)
     }
 
     func testCaptureErrorDoesNotCrash() async throws {
@@ -152,9 +188,10 @@ final class AppDelegateTests: XCTestCase {
 
         try await Task.sleep(for: .milliseconds(100))
 
-        // Capture was attempted but storage should not be called
+        // Capture was attempted and failure metadata is still persisted
         XCTAssertEqual(mockCaptureService.captureCallCount, 1)
-        XCTAssertEqual(mockStorageWriter.writeCallCount, 0)
+        XCTAssertEqual(mockStorageWriter.writeCallCount, 1)
+        XCTAssertEqual(mockStorageWriter.lastMetadata?.status, "failure")
     }
 
     func testStorageErrorDoesNotCrash() async throws {
@@ -170,7 +207,7 @@ final class AppDelegateTests: XCTestCase {
 
         // Both capture and storage were attempted
         XCTAssertEqual(mockCaptureService.captureCallCount, 1)
-        XCTAssertEqual(mockStorageWriter.writeCallCount, 1)
+        XCTAssertEqual(mockStorageWriter.writeCallCount, 2)
     }
 
     // MARK: - Filename Generation Tests
@@ -187,6 +224,7 @@ final class AppDelegateTests: XCTestCase {
 
         XCTAssertTrue(AppDelegate.makeFilename(event: .sessionOpen, format: "jpg", date: date).contains("session-open"))
         XCTAssertTrue(AppDelegate.makeFilename(event: .unlock, format: "jpg", date: date).contains("unlock"))
+        XCTAssertTrue(AppDelegate.makeFilename(event: .lock, format: "jpg", date: date).contains("lock"))
         XCTAssertTrue(AppDelegate.makeFilename(event: .manual, format: "jpg", date: date).contains("manual"))
     }
 

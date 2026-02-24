@@ -8,6 +8,7 @@ struct AppConfig: Sendable {
     var metadata: MetadataConfig
     var ui: UIConfig
     var capture: CaptureConfig
+    var logging: LoggingConfig
 
     struct OutputConfig: Sendable {
         var directory: String
@@ -26,10 +27,12 @@ struct AppConfig: Sendable {
     struct TriggersConfig: Sendable {
         var onSessionOpen: Bool
         var onUnlock: Bool
+        var onLock: Bool
 
         static let `default` = TriggersConfig(
             onSessionOpen: true,
-            onUnlock: true
+            onUnlock: true,
+            onLock: true
         )
     }
 
@@ -54,12 +57,29 @@ struct AppConfig: Sendable {
         static let `default` = CaptureConfig(silent: true, debounceSeconds: 3)
     }
 
+    struct LoggingConfig: Sendable {
+        var enableFileLogging: Bool
+        var directory: String
+        var retentionDays: Int
+        var cleanupIntervalHours: Int
+        var level: String
+
+        static let `default` = LoggingConfig(
+            enableFileLogging: false,
+            directory: ("~/Library/Logs/LoginShot" as NSString).expandingTildeInPath,
+            retentionDays: 14,
+            cleanupIntervalHours: 24,
+            level: "Information"
+        )
+    }
+
     static let `default` = AppConfig(
         output: .default,
         triggers: .default,
         metadata: .default,
         ui: .default,
-        capture: .default
+        capture: .default,
+        logging: .default
     )
 
     /// Validate and clamp config values to acceptable ranges.
@@ -90,6 +110,21 @@ struct AppConfig: Sendable {
         if config.capture.debounceSeconds < 0 {
             Log.config.warning("capture.debounceSeconds \(config.capture.debounceSeconds) is negative; setting to 0")
             config.capture.debounceSeconds = 0
+        }
+
+        if config.logging.retentionDays < 1 {
+            Log.config.warning("logging.retentionDays \(config.logging.retentionDays) is invalid; setting to 14")
+            config.logging.retentionDays = 14
+        }
+
+        if config.logging.cleanupIntervalHours < 1 {
+            Log.config.warning("logging.cleanupIntervalHours \(config.logging.cleanupIntervalHours) is invalid; setting to 24")
+            config.logging.cleanupIntervalHours = 24
+        }
+
+        if config.logging.level.isEmpty {
+            Log.config.warning("logging.level is empty; setting to Information")
+            config.logging.level = "Information"
         }
 
         return config

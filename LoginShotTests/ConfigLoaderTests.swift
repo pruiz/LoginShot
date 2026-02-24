@@ -15,6 +15,7 @@ final class ConfigLoaderTests: XCTestCase {
         triggers:
           onSessionOpen: false
           onUnlock: true
+          onLock: true
         metadata:
           writeSidecar: false
         ui:
@@ -22,6 +23,12 @@ final class ConfigLoaderTests: XCTestCase {
         capture:
           silent: false
           debounceSeconds: 5
+        logging:
+          enableFileLogging: true
+          directory: "~/Library/Logs/LoginShot"
+          retentionDays: 7
+          cleanupIntervalHours: 12
+          level: "Debug"
         """
 
         let config = try ConfigLoader.parse(yaml: yaml)
@@ -33,10 +40,15 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.output.jpegQuality, 0.9, accuracy: 0.001)
         XCTAssertFalse(config.triggers.onSessionOpen)
         XCTAssertTrue(config.triggers.onUnlock)
+        XCTAssertTrue(config.triggers.onLock)
         XCTAssertFalse(config.metadata.writeSidecar)
         XCTAssertFalse(config.ui.menuBarIcon)
         XCTAssertFalse(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 5)
+        XCTAssertTrue(config.logging.enableFileLogging)
+        XCTAssertEqual(config.logging.retentionDays, 7)
+        XCTAssertEqual(config.logging.cleanupIntervalHours, 12)
+        XCTAssertEqual(config.logging.level, "Debug")
     }
 
     // MARK: - Partial YAML (missing keys use defaults)
@@ -57,10 +69,12 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.output.jpegQuality, 0.85, accuracy: 0.001)
         XCTAssertTrue(config.triggers.onSessionOpen)
         XCTAssertTrue(config.triggers.onUnlock)
+        XCTAssertTrue(config.triggers.onLock)
         XCTAssertTrue(config.metadata.writeSidecar)
         XCTAssertTrue(config.ui.menuBarIcon)
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
+        XCTAssertFalse(config.logging.enableFileLogging)
     }
 
     // MARK: - Empty YAML
@@ -94,12 +108,14 @@ final class ConfigLoaderTests: XCTestCase {
         triggers:
           onSessionOpen: false
           onUnlock: false
+          onLock: true
         """
 
         let config = try ConfigLoader.parse(yaml: yaml)
 
         XCTAssertFalse(config.triggers.onSessionOpen)
         XCTAssertFalse(config.triggers.onUnlock)
+        XCTAssertTrue(config.triggers.onLock)
         // Other sections should be defaults
         XCTAssertEqual(config.output.maxWidth, 1280)
         XCTAssertTrue(config.ui.menuBarIcon)

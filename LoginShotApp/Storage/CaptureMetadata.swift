@@ -7,7 +7,10 @@ struct CaptureMetadata: Codable, Sendable {
     let event: String
     let hostname: String
     let username: String
-    let outputPath: String
+    let outputPath: String?
+    let status: String
+    let failure: FailureInfo?
+    let diagnostics: Diagnostics?
     let app: AppInfo
     let camera: CameraInfo
 
@@ -17,11 +20,26 @@ struct CaptureMetadata: Codable, Sendable {
         let build: String
     }
 
+    struct FailureInfo: Codable, Sendable {
+        let reason: String
+        let message: String?
+    }
+
+    struct Diagnostics: Codable, Sendable {
+        let backend: String
+        let durationMs: Int
+        let attemptCount: Int
+        let failureCode: String?
+    }
+
     /// Build metadata for a capture event using current system state.
     static func build(
         event: CaptureEvent,
-        outputPath: String,
-        cameraInfo: CameraInfo
+        outputPath: String?,
+        cameraInfo: CameraInfo,
+        success: Bool,
+        failure: FailureInfo? = nil,
+        diagnostics: Diagnostics? = nil
     ) -> CaptureMetadata {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -33,6 +51,9 @@ struct CaptureMetadata: Codable, Sendable {
             hostname: ProcessInfo.processInfo.hostName,
             username: NSUserName(),
             outputPath: outputPath,
+            status: success ? "success" : "failure",
+            failure: failure,
+            diagnostics: diagnostics,
             app: AppInfo(
                 bundleId: bundle.bundleIdentifier ?? "dev.pruiz.LoginShot",
                 version: bundle.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0",

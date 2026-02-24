@@ -24,6 +24,11 @@ final class FilenameTests: XCTestCase {
         XCTAssertTrue(filename.hasSuffix("-manual.jpg"))
     }
 
+    func testFilenameFormatLock() {
+        let filename = AppDelegate.makeFilename(event: .lock, format: "jpg")
+        XCTAssertTrue(filename.hasSuffix("-lock.jpg"))
+    }
+
     func testFilenameTimestampFormat() {
         let filename = AppDelegate.makeFilename(event: .sessionOpen, format: "jpg")
 
@@ -81,10 +86,12 @@ final class FilenameTests: XCTestCase {
 
         let sessionOpenFilename = AppDelegate.makeFilename(event: .sessionOpen, format: "jpg", date: date)
         let unlockFilename = AppDelegate.makeFilename(event: .unlock, format: "jpg", date: date)
+        let lockFilename = AppDelegate.makeFilename(event: .lock, format: "jpg", date: date)
         let manualFilename = AppDelegate.makeFilename(event: .manual, format: "jpg", date: date)
 
         XCTAssertEqual(sessionOpenFilename, "2024-07-04T12-00-00-session-open.jpg")
         XCTAssertEqual(unlockFilename, "2024-07-04T12-00-00-unlock.jpg")
+        XCTAssertEqual(lockFilename, "2024-07-04T12-00-00-lock.jpg")
         XCTAssertEqual(manualFilename, "2024-07-04T12-00-00-manual.jpg")
     }
 

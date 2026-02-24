@@ -126,10 +126,11 @@ final class UnlockObserverTests: XCTestCase {
         }
 
         mock.simulateEvent(.unlock)
+        mock.simulateEvent(.lock)
         mock.simulateEvent(.sessionOpen)
         mock.simulateEvent(.manual)
 
-        XCTAssertEqual(receivedEvents, [.unlock, .sessionOpen, .manual])
+        XCTAssertEqual(receivedEvents, [.unlock, .lock, .sessionOpen, .manual])
     }
 
     func testMockUnlockObserverSimulateUnlockHelper() {
@@ -143,6 +144,19 @@ final class UnlockObserverTests: XCTestCase {
         mock.simulateUnlock()
 
         XCTAssertEqual(receivedEvent, .unlock)
+    }
+
+    func testMockUnlockObserverSimulateLockHelper() {
+        let mock = MockUnlockObserver()
+        var receivedEvent: CaptureEvent?
+
+        mock.start(debounceSeconds: 3) { event in
+            receivedEvent = event
+        }
+
+        mock.simulateLock()
+
+        XCTAssertEqual(receivedEvent, .lock)
     }
 
     func testMockUnlockObserverIsRunningProperty() {

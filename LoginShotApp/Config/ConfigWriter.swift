@@ -61,6 +61,10 @@ enum ConfigWriter {
           # Capture when the user session is unlocked.
           onUnlock: true
 
+          # Best-effort capture when the user session is locked.
+          # macOS emits multiple lock-related signals; debounce suppresses duplicates.
+          onLock: true
+
         metadata:
           # Write a JSON sidecar file next to each image.
           writeSidecar: true
@@ -76,6 +80,23 @@ enum ConfigWriter {
           # Minimum seconds between captures from unlock signals.
           # Prevents duplicate captures from multiple OS notifications.
           debounceSeconds: 3
+
+        logging:
+          # Write app logs to files in addition to macOS unified logging.
+          # Default false keeps logging fully OS-managed.
+          enableFileLogging: false
+
+          # Directory for daily LoginShot logs.
+          directory: "~/Library/Logs/LoginShot"
+
+          # Keep log files newer than this number of days.
+          retentionDays: 14
+
+          # Run cleanup this often.
+          cleanupIntervalHours: 24
+
+          # Trace|Debug|Information|Warning|Error|Critical|None
+          level: "Information"
         """
     }
 }
