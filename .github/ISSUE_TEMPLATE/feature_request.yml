@@ -1,0 +1,46 @@
+name: Feature request
+description: Propose an enhancement
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share the problem first, then the proposed solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior and UX you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Area
+      options:
+        - Capture
+        - Triggers
+        - Storage
+        - Startup registration
+        - Config
+        - Menu bar UI
+        - Logging
+        - Docs
+        - CI/Tooling
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context

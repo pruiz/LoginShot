@@ -7,8 +7,9 @@ This file guides coding agents (OpenCode, Cursor agents, Copilot agents, etc.) w
 Build a macOS agent app that:
 1) captures a webcam snapshot when the agent starts after user login (`session-open`),
 2) captures a snapshot when the user session becomes active/unlocked (`unlock`),
-3) writes the image into a configurable folder,
-4) writes a sidecar metadata JSON file per capture.
+3) attempts capture when the user session becomes inactive/locked (`lock`, best-effort),
+4) writes the image into a configurable folder,
+5) writes a sidecar metadata JSON file per capture.
 
 See `README.md` for user-facing behavior and examples.
 
@@ -31,19 +32,22 @@ Keep v1 local-only: no cloud APIs, no face recognition.
 - Event triggers:
   - On launch: capture once (`session-open`)
   - On unlock/session active: capture once (`unlock`)
+  - On lock/session inactive: capture once (`lock`, best-effort)
   - Debounce repeated OS signals
 - Config: YAML (prefer `Yams`)
 - Metadata sidecar: JSON (`Codable`)
-- Logging: `os.Logger`
+- Logging: `os.Logger` by default, optional file logging via config
 - Concurrency: async/await (structured concurrency)
 - Packaging: menu-bar/agent style app (`LSUIElement=1`), optional menu bar icon
+- Startup registration: LaunchAgent scripts + in-app menu toggle
 
 ## Repository Structure (target)
 
 - `LoginShotApp/`
   - `App/` (entrypoint, lifecycle, optional menu bar)
   - `Capture/` (camera access + one-shot capture)
-  - `Triggers/` (session-open + unlock observers)
+  - `Triggers/` (session-open + unlock + lock observers)
+  - `Startup/` (LaunchAgent registration/toggle service)
   - `Config/` (load/parse/defaults/path expansion)
   - `Storage/` (filenaming, atomic writes, sidecar JSON)
   - `Util/` (debounce, clock/time helpers, logging helpers)
@@ -57,11 +61,13 @@ Agents may scaffold this structure as needed.
 - Capture one still image quickly.
 - Release camera resources after capture.
 - Handle failures gracefully (log + continue, no crash).
+- Apply watermark on successful captures when enabled (default enabled).
 
 ### Triggers
 - Capture once on app launch (`session-open`).
 - Capture once per unlock/session-active event (`unlock`).
-- Debounce interval configurable (default `3` seconds).
+- Attempt capture once per lock/session-inactive event (`lock`, best-effort).
+- Debounce interval configurable (default `3` seconds), with per-event behavior.
 
 ### Storage
 - Ensure output directory exists (create if missing).
@@ -82,9 +88,26 @@ Agents may scaffold this structure as needed.
 - If enabled, include:
   - `Capture now`
   - `Open output folder`
+  - `Start at Login`
+  - `Camera` (auto/specific unique ID + verify)
+  - `Open log`
+  - `Edit config`
   - `Reload config`
   - `Generate sample config`
   - `Quit`
+
+### Startup registration
+- In-app `Start at Login` toggle should manage LaunchAgent state for current user.
+- Keep `LaunchAgent/install.sh` and `LaunchAgent/uninstall.sh` as manual fallback.
+- Handle startup-registration failures gracefully (log + user-visible error, no crash).
+
+### Camera selection
+- Support persisted camera selection via `capture.cameraUniqueID`.
+- Support menu-based camera verify flow.
+
+### Watermark
+- `watermark.enabled` defaults to `true`.
+- `watermark.format` defaults to `yyyy-MM-dd HH:mm:ss zzz`.
 
 ## Build / Lint / Test Commands (keep updated)
 
@@ -251,7 +274,8 @@ None present at time of writing. If `.cursorrules`, `.cursor/rules/`, or `.githu
 
 - Ensure CI passes before merge (build/test/lint per repository policy).
 - If CI fails, fix root cause before requesting merge.
-- Prefer squash merge unless project policy specifies otherwise.
+- Use squash merge (merge commits are blocked by repository policy).
+- Resolve review threads/comments that block merge before merging.
 - After merge, clean up branches according to repository conventions.
 
 ## Notes / Pitfalls
