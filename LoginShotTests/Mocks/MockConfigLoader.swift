@@ -10,9 +10,20 @@ final class MockConfigLoader: ConfigLoaderProtocol, @unchecked Sendable {
     /// Number of times load() was called.
     var loadCallCount = 0
 
+    /// Optional explicit result to return from loadResult().
+    var resultToReturn: ConfigLoadResult?
+
     func load() -> AppConfig {
         loadCallCount += 1
         return configToReturn
+    }
+
+    func loadResult() -> ConfigLoadResult {
+        loadCallCount += 1
+        if let resultToReturn {
+            return resultToReturn
+        }
+        return .loaded(config: configToReturn, sourcePath: "/tmp/config.yml")
     }
 
     // MARK: - Test Helpers
@@ -21,5 +32,6 @@ final class MockConfigLoader: ConfigLoaderProtocol, @unchecked Sendable {
     func reset() {
         loadCallCount = 0
         configToReturn = .default
+        resultToReturn = nil
     }
 }

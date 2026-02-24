@@ -8,6 +8,7 @@ final class MenuBarController: NSObject {
     private var statusItem: NSStatusItem?
     private let onCaptureNow: @MainActor () -> Void
     private let onReloadConfig: @MainActor () -> Void
+    private let onEditConfig: @MainActor () -> Void
     private let onGenerateConfig: @MainActor () -> Void
     private let onOpenLog: @MainActor () -> Void
     private let outputDirectoryProvider: @MainActor () -> String
@@ -16,12 +17,14 @@ final class MenuBarController: NSObject {
         outputDirectoryProvider: @escaping @MainActor () -> String,
         onCaptureNow: @escaping @MainActor () -> Void,
         onReloadConfig: @escaping @MainActor () -> Void,
+        onEditConfig: @escaping @MainActor () -> Void,
         onGenerateConfig: @escaping @MainActor () -> Void,
         onOpenLog: @escaping @MainActor () -> Void
     ) {
         self.outputDirectoryProvider = outputDirectoryProvider
         self.onCaptureNow = onCaptureNow
         self.onReloadConfig = onReloadConfig
+        self.onEditConfig = onEditConfig
         self.onGenerateConfig = onGenerateConfig
         self.onOpenLog = onOpenLog
         super.init()
@@ -65,6 +68,14 @@ final class MenuBarController: NSObject {
         )
         reloadItem.target = self
         menu.addItem(reloadItem)
+
+        let editItem = NSMenuItem(
+            title: "Edit Config",
+            action: #selector(editConfigAction(_:)),
+            keyEquivalent: ""
+        )
+        editItem.target = self
+        menu.addItem(editItem)
 
         let generateItem = NSMenuItem(
             title: "Generate Sample Config",
@@ -123,6 +134,11 @@ final class MenuBarController: NSObject {
     @objc private func reloadConfigAction(_ sender: Any?) {
         Log.ui.info("Menu: Reload Config")
         onReloadConfig()
+    }
+
+    @objc private func editConfigAction(_ sender: Any?) {
+        Log.ui.info("Menu: Edit Config")
+        onEditConfig()
     }
 
     @objc private func generateConfigAction(_ sender: Any?) {
