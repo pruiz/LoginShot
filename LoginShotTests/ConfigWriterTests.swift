@@ -73,6 +73,7 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("metadata:"), "Missing metadata section")
         XCTAssertTrue(yaml.contains("ui:"), "Missing ui section")
         XCTAssertTrue(yaml.contains("capture:"), "Missing capture section")
+        XCTAssertTrue(yaml.contains("logging:"), "Missing logging section")
     }
 
     func testSampleYAMLContainsDefaultValues() {
@@ -82,6 +83,8 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("maxWidth: 1280"), "Missing default maxWidth")
         XCTAssertTrue(yaml.contains("jpegQuality: 0.85"), "Missing default jpegQuality")
         XCTAssertTrue(yaml.contains("debounceSeconds: 3"), "Missing default debounceSeconds")
+        XCTAssertTrue(yaml.contains("onLock: true"), "Missing default onLock")
+        XCTAssertTrue(yaml.contains("enableFileLogging: false"), "Missing default file logging toggle")
     }
 
     func testSampleYAMLIsValidYAML() throws {
@@ -94,9 +97,11 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertEqual(config.output.jpegQuality, 0.85, accuracy: 0.001)
         XCTAssertTrue(config.triggers.onSessionOpen)
         XCTAssertTrue(config.triggers.onUnlock)
+        XCTAssertTrue(config.triggers.onLock)
         XCTAssertTrue(config.metadata.writeSidecar)
         XCTAssertTrue(config.ui.menuBarIcon)
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
+        XCTAssertFalse(config.logging.enableFileLogging)
     }
 }

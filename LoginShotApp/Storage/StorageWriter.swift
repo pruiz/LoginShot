@@ -10,7 +10,7 @@ enum StorageError: Error, Sendable {
 protocol StorageWriterProtocol: Sendable {
     func writeCapture(
         event: CaptureEvent,
-        jpegData: Data,
+        jpegData: Data?,
         metadata: CaptureMetadata,
         config: AppConfig
     ) async throws
@@ -21,7 +21,7 @@ final class StorageWriter: StorageWriterProtocol, Sendable {
 
     func writeCapture(
         event: CaptureEvent,
-        jpegData: Data,
+        jpegData: Data?,
         metadata: CaptureMetadata,
         config: AppConfig
     ) async throws {
@@ -31,15 +31,19 @@ final class StorageWriter: StorageWriterProtocol, Sendable {
         try ensureDirectory(directory)
 
         // 2. Derive file paths from metadata.outputPath (already contains full JPEG path)
-        let jpegPath = metadata.outputPath
+        guard let jpegPath = metadata.outputPath else {
+            throw StorageError.writeFailed("metadata.outputPath is required")
+        }
         let jsonPath = (jpegPath as NSString).deletingPathExtension + ".json"
 
-        // 3. Atomic write JPEG
-        try atomicWrite(data: jpegData, to: jpegPath)
-        Log.storage.info("Wrote image: \(jpegPath) (\(jpegData.count) bytes)")
+        // 3. Atomic write JPEG if image data exists
+        if let jpegData {
+            try atomicWrite(data: jpegData, to: jpegPath)
+            Log.storage.info("Wrote image: \(jpegPath) (\(jpegData.count) bytes)")
+        }
 
-        // 4. Atomic write JSON sidecar if enabled
-        if config.metadata.writeSidecar {
+        // 4. Atomic write JSON sidecar when enabled, or always for failures
+        if config.metadata.writeSidecar || metadata.status == "failure" {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let jsonData = try encoder.encode(metadata)

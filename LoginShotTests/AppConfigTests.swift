@@ -14,6 +14,7 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(config.output.jpegQuality, 0.85)
         XCTAssertTrue(config.triggers.onSessionOpen)
         XCTAssertTrue(config.triggers.onUnlock)
+        XCTAssertTrue(config.triggers.onLock)
         XCTAssertTrue(config.metadata.writeSidecar)
         XCTAssertTrue(config.ui.menuBarIcon)
         XCTAssertTrue(config.capture.silent)

@@ -11,7 +11,7 @@ final class MockStorageWriter: StorageWriterProtocol, @unchecked Sendable {
     var writtenEvents: [CaptureEvent] = []
 
     /// All JPEG data received in order.
-    var writtenJpegData: [Data] = []
+    var writtenJpegData: [Data?] = []
 
     /// All metadata received in order.
     var writtenMetadata: [CaptureMetadata] = []
@@ -24,7 +24,7 @@ final class MockStorageWriter: StorageWriterProtocol, @unchecked Sendable {
 
     func writeCapture(
         event: CaptureEvent,
-        jpegData: Data,
+        jpegData: Data?,
         metadata: CaptureMetadata,
         config: AppConfig
     ) async throws {

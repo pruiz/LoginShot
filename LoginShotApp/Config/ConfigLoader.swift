@@ -69,6 +69,7 @@ enum ConfigLoader {
         let metadataDict = root["metadata"] as? [String: Any] ?? [:]
         let uiDict = root["ui"] as? [String: Any] ?? [:]
         let captureDict = root["capture"] as? [String: Any] ?? [:]
+        let loggingDict = root["logging"] as? [String: Any] ?? [:]
 
         let output = AppConfig.OutputConfig(
             directory: expandPath(outputDict["directory"] as? String ?? "~/Pictures/LoginShot"),
@@ -79,7 +80,8 @@ enum ConfigLoader {
 
         let triggers = AppConfig.TriggersConfig(
             onSessionOpen: triggersDict["onSessionOpen"] as? Bool ?? true,
-            onUnlock: triggersDict["onUnlock"] as? Bool ?? true
+            onUnlock: triggersDict["onUnlock"] as? Bool ?? true,
+            onLock: triggersDict["onLock"] as? Bool ?? true
         )
 
         let metadata = AppConfig.MetadataConfig(
@@ -95,12 +97,21 @@ enum ConfigLoader {
             debounceSeconds: extractInt(captureDict["debounceSeconds"], default: 3)
         )
 
+        let logging = AppConfig.LoggingConfig(
+            enableFileLogging: loggingDict["enableFileLogging"] as? Bool ?? AppConfig.LoggingConfig.default.enableFileLogging,
+            directory: expandPath(loggingDict["directory"] as? String ?? AppConfig.LoggingConfig.default.directory),
+            retentionDays: extractInt(loggingDict["retentionDays"], default: AppConfig.LoggingConfig.default.retentionDays),
+            cleanupIntervalHours: extractInt(loggingDict["cleanupIntervalHours"], default: AppConfig.LoggingConfig.default.cleanupIntervalHours),
+            level: loggingDict["level"] as? String ?? AppConfig.LoggingConfig.default.level
+        )
+
         return AppConfig(
             output: output,
             triggers: triggers,
             metadata: metadata,
             ui: ui,
-            capture: capture
+            capture: capture,
+            logging: logging
         )
     }
 

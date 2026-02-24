@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/pruiz/LoginShot/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/pruiz/LoginShot/actions/workflows/ci.yml)
 
-LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login) and when the session is **unlocked**, then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine. (PoC of original idea by @aramosf)
+LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login), when the session is **unlocked**, and optionally when it is **locked** (best-effort), then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine. (PoC of original idea by @aramosf)
 
 > **Privacy notice**
 > This tool records images from your Mac’s camera. Use it only on devices you own/administer, and only in compliance with applicable laws and policies. In many places you must disclose camera-based monitoring.
@@ -14,6 +14,7 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
 - Triggers:
   - **session-open** (agent start after user login)
   - **unlock** (session becomes active/unlocked)
+  - **lock** (best-effort on macOS)
 - One-shot snapshot using AVFoundation
 - Store image + sidecar metadata file (JSON)
 - YAML configuration file
@@ -136,10 +137,11 @@ LoginShot reads configuration from (first found wins):
 If no config file is found, LoginShot uses these defaults:
 - **Output directory:** `~/Pictures/LoginShot/`
 - **Format:** `jpg` (1280px max width, 0.85 quality)
-- **Triggers:** both `session-open` and `unlock` enabled
+- **Triggers:** `session-open` + `unlock` + `lock` enabled (`lock` is best-effort)
 - **Metadata:** JSON sidecar enabled
 - **Menu bar icon:** enabled
 - **Debounce:** 3 seconds
+- **File logging:** disabled (uses macOS unified logging by default)
 
 ### YAML example
 ```yaml
@@ -152,6 +154,7 @@ output:
 triggers:
   onSessionOpen: true    # agent start after login
   onUnlock: true
+  onLock: true           # best-effort on macOS
 
 metadata:
   writeSidecar: true     # write a .json next to each image
@@ -162,6 +165,13 @@ ui:
 capture:
   silent: true           # no effect in v1 (macOS has no shutter sound); reserved for future use
   debounceSeconds: 3
+
+logging:
+  enableFileLogging: false
+  directory: "~/Library/Logs/LoginShot"
+  retentionDays: 14
+  cleanupIntervalHours: 24
+  level: "Information"  # Trace|Debug|Information|Warning|Error|Critical|None
 ```
 
 ## Output files
@@ -170,6 +180,7 @@ Images are saved with a timestamp and event tag:
 
 - `2026-02-22T00-15-03-session-open.jpg` — captured at login
 - `2026-02-22T08-41-10-unlock.jpg` — captured on session unlock
+- `2026-02-22T08-45-00-lock.jpg` — best-effort capture on session lock (if enabled)
 - `2026-02-22T14-30-00-manual.jpg` — captured via "Capture Now" menu action
 
 If enabled, a sidecar metadata JSON is also written:
@@ -181,9 +192,17 @@ If enabled, a sidecar metadata JSON is also written:
 {
   "timestamp": "2026-02-22T08:41:10.123Z",
   "event": "unlock",
+  "status": "success",
   "hostname": "MBP-Pablo",
   "username": "pablo",
   "outputPath": "/Users/pablo/Library/CloudStorage/Dropbox/LoginShot/2026-02-22T08-41-10-unlock.jpg",
+  "failure": null,
+  "diagnostics": {
+    "backend": "avfoundation",
+    "durationMs": 611,
+    "attemptCount": 1,
+    "failureCode": null
+  },
   "app": {
     "bundleId": "dev.pruiz.LoginShot",
     "version": "0.1.0",
@@ -204,6 +223,7 @@ When `ui.menuBarIcon` is `true` (the default), LoginShot shows a camera icon in 
 |-----------|-------------|
 | **Capture Now** | Take a snapshot immediately (tagged as `manual` event) |
 | **Open Output Folder** | Reveal the output directory in Finder |
+| **Open Log** | Open current daily log file (when `logging.enableFileLogging` is true) |
 | **Reload Config** | Re-read the YAML config file without restarting |
 | **Generate Sample Config** | Write a commented `config.yml` to `~/Library/Application Support/LoginShot/` (will not overwrite an existing file) |
 | **Quit** | Shut down LoginShot |
@@ -215,6 +235,8 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
   - System Settings → Privacy & Security → Camera → enable LoginShot.
 - **Unlock capture doesn’t trigger**
   - Unlock signals vary by macOS version. We may combine NSWorkspace + distributed notifications to make this robust.
+- **Lock capture behaves inconsistently**
+  - `onLock` is best-effort on macOS and may fire during related session-inactive transitions (for example, fast user switching).
 - **Terminal warning at startup**
   - You may see `objc: class NSKVONotifying_AVCapturePhotoOutput not linked into application` when launching from console.
   - This warning is emitted by Apple runtime/framework internals and does not affect capture functionality.
@@ -231,6 +253,26 @@ Set `ui.menuBarIcon: false` in config for fully headless operation. Changing thi
 - v2: optional Dropbox/Drive API upload
 - v3: optional collector service
 - v4: optional face verification + alerting
+
+## Feature Parity Roadmap (macOS vs .NET)
+
+Planned phases to align macOS behavior with `LoginShot.DotNet` while preserving platform-specific constraints:
+
+1. **Phase 1 - Reliability + observability parity**
+   - Failure sidecar persistence on capture errors (`status` + `failure` fields).
+   - Optional file logging configuration (`logging.*`) with retention and `Open Log` menu action.
+   - Default behavior remains macOS unified logging (`os.Logger`); file logging is opt-in.
+2. **Phase 2 - Trigger parity**
+   - Add best-effort `lock` trigger with independent debounce behavior.
+3. **Phase 3 - Config UX parity**
+   - File-watch auto-reload with debounce and last-known-good fallback.
+   - Add `Edit Config` tray action.
+4. **Phase 4 - Camera selection parity**
+   - Configurable camera selection plus tray verification flow.
+5. **Phase 5 - Watermark parity**
+   - Add configurable watermarking (enabled by default for parity).
+6. **Phase 6 - Startup UX parity**
+   - In-app toggle for start-after-login, keeping LaunchAgent scripts as manual fallback.
 
 ## Security notes
 - v1 is local-only (no network required).

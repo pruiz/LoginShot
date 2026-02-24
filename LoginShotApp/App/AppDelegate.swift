@@ -63,9 +63,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 3. Setup unlock observer
         let observer = unlockObserverFactory()
-        if config.triggers.onUnlock {
+        if config.triggers.onUnlock || config.triggers.onLock {
             observer.start(debounceSeconds: config.capture.debounceSeconds) { [weak self] event in
-                self?.handleCaptureEvent(event)
+                guard let self else { return }
+
+                switch event {
+                case .unlock where self.config.triggers.onUnlock:
+                    self.handleCaptureEvent(event)
+                case .lock where self.config.triggers.onLock:
+                    self.handleCaptureEvent(event)
+                default:
+                    Log.triggers.debug("Ignoring \(event.rawValue) event (disabled by config)")
+                }
             }
         }
         self.unlockObserver = observer
@@ -91,6 +100,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.app.info("Capture event: \(event.rawValue)")
 
         Task { @MainActor [config, captureService, storageWriter, dateProvider] in
+            let startedAt = Date()
+            let filename = Self.makeFilename(
+                event: event,
+                format: config.output.format,
+                date: dateProvider.now()
+            )
+            let outputPath = (config.output.directory as NSString)
+                .appendingPathComponent(filename)
+
             do {
                 // 1. Capture JPEG from camera
                 let result = try await captureService.captureJPEG(
@@ -99,17 +117,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
 
                 // 2. Build metadata
-                let filename = Self.makeFilename(
-                    event: event,
-                    format: config.output.format,
-                    date: dateProvider.now()
-                )
-                let outputPath = (config.output.directory as NSString)
-                    .appendingPathComponent(filename)
                 let metadata = CaptureMetadata.build(
                     event: event,
                     outputPath: outputPath,
-                    cameraInfo: result.cameraInfo
+                    cameraInfo: result.cameraInfo,
+                    success: true,
+                    diagnostics: CaptureMetadata.Diagnostics(
+                        backend: "avfoundation",
+                        durationMs: Int(Date().timeIntervalSince(startedAt) * 1000),
+                        attemptCount: 1,
+                        failureCode: nil
+                    )
                 )
 
                 // 3. Write to disk
@@ -123,6 +141,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Log.app.info("Capture complete: \(filename)")
             } catch {
                 Log.app.error("Capture failed for event '\(event.rawValue)': \(error.localizedDescription)")
+
+                let metadata = CaptureMetadata.build(
+                    event: event,
+                    outputPath: outputPath,
+                    cameraInfo: .unknown,
+                    success: false,
+                    failure: CaptureMetadata.FailureInfo(
+                        reason: "camera_capture_failed",
+                        message: error.localizedDescription
+                    ),
+                    diagnostics: CaptureMetadata.Diagnostics(
+                        backend: "avfoundation",
+                        durationMs: Int(Date().timeIntervalSince(startedAt) * 1000),
+                        attemptCount: 1,
+                        failureCode: "exception"
+                    )
+                )
+
+                do {
+                    try await storageWriter.writeCapture(
+                        event: event,
+                        jpegData: nil,
+                        metadata: metadata,
+                        config: config
+                    )
+                } catch {
+                    Log.app.error("Failed to persist failure sidecar for event '\(event.rawValue)': \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -132,6 +178,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func reloadConfig() {
         let previousMenuBarEnabled = config.ui.menuBarIcon
         config = configLoader.load()
+        Log.configureFileLogging(
+            enabled: config.logging.enableFileLogging,
+            directory: config.logging.directory,
+            retentionDays: config.logging.retentionDays,
+            cleanupIntervalHours: config.logging.cleanupIntervalHours,
+            level: config.logging.level
+        )
 
         let currentMenuBarEnabled = self.config.ui.menuBarIcon
         if currentMenuBarEnabled != previousMenuBarEnabled {
@@ -172,10 +225,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             onGenerateConfig: { [weak self] in
                 self?.generateSampleConfig()
+            },
+            onOpenLog: { [weak self] in
+                self?.openCurrentLogFile()
             }
         )
         controller.setup()
         self.menuBarController = controller
+    }
+
+    private func openCurrentLogFile() {
+        Task { @MainActor in
+            guard let path = await FileLogger.shared.currentLogPath() else {
+                Log.ui.info("Open Log requested, but file logging is disabled")
+                return
+            }
+
+            let url = URL(fileURLWithPath: path)
+            if !FileManager.default.fileExists(atPath: path) {
+                FileManager.default.createFile(atPath: path, contents: nil)
+            }
+            NSWorkspace.shared.open(url)
+        }
     }
 
     // MARK: - Filename Generation

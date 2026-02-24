@@ -4,6 +4,8 @@ enum CaptureEvent: String, Sendable, CaseIterable {
     case sessionOpen = "session-open"
     /// User session unlocked / became active.
     case unlock = "unlock"
+    /// User session locked / became inactive (best-effort on macOS).
+    case lock = "lock"
     /// Manual capture requested from menu bar.
     case manual = "manual"
 }

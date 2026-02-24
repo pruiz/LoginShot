@@ -46,6 +46,11 @@ final class MockUnlockObserver: UnlockObserving {
         simulateEvent(.unlock)
     }
 
+    /// Simulate a lock event.
+    func simulateLock() {
+        simulateEvent(.lock)
+    }
+
     /// Reset all recorded state.
     func reset() {
         startCalled = false
