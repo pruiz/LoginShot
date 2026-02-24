@@ -89,9 +89,9 @@ actor FileLogger {
         if let data = line.data(using: .utf8),
             FileManager.default.fileExists(atPath: path),
             let fileHandle = FileHandle(forWritingAtPath: path) {
-            defer { try? fileHandle.close() }
             _ = try? fileHandle.seekToEnd()
             try? fileHandle.write(contentsOf: data)
+            try? fileHandle.close()
             return
         }
 
