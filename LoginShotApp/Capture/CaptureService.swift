@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreMedia
 import CoreText
 import Foundation
 import ImageIO
@@ -102,7 +103,7 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
 /// Manages a single AVCaptureSession lifecycle: setup → capture → teardown.
 /// Uses @unchecked Sendable because all AVFoundation state is accessed
 /// sequentially (never concurrently) through the async run() method.
-private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
+private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
 
     private let maxWidth: Int
     private let quality: Double
@@ -113,6 +114,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     private let watermarkEnabled: Bool
     private let watermarkFormat: String
     private let hostname: String
+
+    /// Time to run the pipeline (with video output) so the camera can auto-expose before the still capture.
+    private static let exposureWarmUpDuration: Duration = .seconds(2)
 
     private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String) {
         self.maxWidth = maxWidth
@@ -195,20 +199,40 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         }
         session.addInput(input)
 
+        // Configure device to meter exposure for center (where the face usually is).
+        // Without this, the camera may expose for bright background and leave the subject dark.
+        Self.configureCenterExposure(device: device)
+
+        // Add video output so the pipeline actually processes frames; otherwise the first still can be dark.
+        // Photo Booth works because it runs a live preview; we "prime" by running video briefly.
+        let videoOutput = AVCaptureVideoDataOutput()
+        videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "dev.pruiz.LoginShot.videoPriming"))
+        guard session.canAddOutput(videoOutput) else {
+            throw CaptureError.captureFailed("Cannot add video output to capture session")
+        }
+        session.addOutput(videoOutput)
+
         let output = AVCapturePhotoOutput()
         guard session.canAddOutput(output) else {
             throw CaptureError.captureFailed("Cannot add photo output to capture session")
         }
         session.addOutput(output)
 
-        // Start session and allow camera sensor to stabilize (exposure, white balance)
+        // Start session and let the pipeline run so the camera sees the scene and adjusts exposure.
         session.startRunning()
-
-        try await Task.sleep(for: .milliseconds(500))
 
         guard session.isRunning else {
             throw CaptureError.captureFailed("Capture session failed to start")
         }
+
+        // Warm-up: let the pipeline process frames so the camera auto-exposes (like a short preview).
+        try await Task.sleep(for: Self.exposureWarmUpDuration)
+
+#if !os(macOS)
+        // On iOS, wait for adjustment flags then lock exposure so the still uses the same exposure.
+        try await Self.waitForExposureSettle(device: device)
+        try await Self.lockExposureAtCurrent(device: device)
+#endif
 
         // Capture photo via delegate callback → continuation
         let result: CaptureResult = try await withCheckedThrowingContinuation { continuation in
@@ -229,6 +253,71 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         Log.capture.info("Capture complete (\(result.jpegData.count) bytes)")
 
         return result
+    }
+
+    /// Wait for the device to finish auto-exposure (and focus/white balance) so the first frame is not dark.
+    /// Polls up to a timeout to avoid hanging; in bright rooms this returns quickly.
+    private static func waitForExposureSettle(device: AVCaptureDevice) async throws {
+        let settleInterval: Duration = .milliseconds(100)
+        let settleTimeout: Duration = .seconds(2)
+        var elapsed: Duration = .zero
+
+        while elapsed < settleTimeout {
+            let adjusting = device.isAdjustingExposure || device.isAdjustingFocus || device.isAdjustingWhiteBalance
+            if !adjusting {
+                if elapsed > .zero {
+                    Log.capture.debug("Exposure settled after \(elapsed)")
+                }
+                return
+            }
+            try await Task.sleep(for: settleInterval)
+            elapsed += settleInterval
+        }
+
+        Log.capture.info("Exposure settle timeout (\(settleTimeout)); capturing anyway")
+    }
+
+    /// Configure device to meter exposure for the center of the frame (typical face position).
+    private static func configureCenterExposure(device: AVCaptureDevice) {
+        do {
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+            if device.isExposurePointOfInterestSupported, device.isExposureModeSupported(.continuousAutoExposure) {
+                device.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                device.exposureMode = .continuousAutoExposure
+                Log.capture.debug("Configured center exposure metering")
+            }
+        } catch {
+            Log.capture.warning("Could not configure exposure: \(error.localizedDescription)")
+        }
+    }
+
+    /// Lock exposure at current duration/ISO so the still capture uses the same exposure.
+    /// No-op on macOS (custom exposure lock API is iOS-only); center metering + warm-up do the work there.
+    private static func lockExposureAtCurrent(device: AVCaptureDevice) async throws {
+        #if os(iOS)
+        guard device.isExposureModeSupported(.custom) else { return }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            do {
+                try device.lockForConfiguration()
+                let duration = device.exposureDuration
+                let iso = device.iso
+                device.setExposureModeCustom(duration: duration, iso: iso) { _ in
+                    device.unlockForConfiguration()
+                    continuation.resume()
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+        #endif
+    }
+
+    // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate (priming only; no-op)
+
+    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // No-op: we only add the video output so the pipeline runs and the camera exposes correctly.
     }
 
     // MARK: - AVCapturePhotoCaptureDelegate
