@@ -54,7 +54,9 @@ protocol CaptureServiceProtocol: Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmupEnabled: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult
     func listCameras() -> [CameraDeviceDescriptor]
 }
@@ -68,7 +70,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmupEnabled: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult {
         try await OneShotCapture.perform(
             maxWidth: maxWidth,
@@ -102,7 +106,7 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
 /// Manages a single AVCaptureSession lifecycle: setup → capture → teardown.
 /// Uses @unchecked Sendable because all AVFoundation state is accessed
 /// sequentially (never concurrently) through the async run() method.
-private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
+private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
 
     private let maxWidth: Int
     private let quality: Double
@@ -114,15 +118,16 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     private let watermarkFormat: String
     private let hostname: String
 
-    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String) {
+    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String, exposureWarmupEnabled: Bool, exposureWarmupDuration: Double) {
         self.maxWidth = maxWidth
         self.quality = quality
         self.watermarkEnabled = watermarkEnabled
         self.watermarkFormat = watermarkFormat
         self.hostname = hostname
+        self.exposureWarmupEnabled = exposureWarmupEnabled
+        self.exposureWarmupDuration = exposureWarmupDuration
         super.init()
     }
-
     /// Entry point: check authorization, find camera, capture, return JPEG data.
     static func perform(
         maxWidth: Int,
@@ -130,7 +135,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmupEnabled: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult {
         // 1. Check / request camera authorization
         try await ensureCameraAuthorization()
@@ -195,19 +202,38 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         }
         session.addInput(input)
 
-        let output = AVCapturePhotoOutput()
-        guard session.canAddOutput(output) else {
+        let photoOutput = AVCapturePhotoOutput()
+        guard session.canAddOutput(photoOutput) else {
             throw CaptureError.captureFailed("Cannot add photo output to capture session")
         }
-        session.addOutput(output)
+        session.addOutput(photoOutput)
+
+        // If exposure warmup is enabled, add video output for warmup
+        if exposureWarmupEnabled {
+            let videoOutput = AVCaptureVideoDataOutput()
+            videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "videoDataOutputQueue"))
+            if session.canAddOutput(videoOutput) {
+                session.addOutput(videoOutput)
+            } else {
+                Log.capture.warning("Could not add video data output for warmup")
+            }
+        }
 
         // Start session and allow camera sensor to stabilize (exposure, white balance)
         session.startRunning()
 
-        try await Task.sleep(for: .milliseconds(500))
-
-        guard session.isRunning else {
-            throw CaptureError.captureFailed("Capture session failed to start")
+        if exposureWarmupEnabled {
+            # Configure center exposure and lock exposure (iOS only)
+            #if !os(macOS)
+            configureCenterExposure(device)
+            lockExposureAtCurrent(device)
+            #endif
+            
+            # Wait for exposure warmup duration
+            try await Task.sleep(for: .seconds(exposureWarmupDuration))
+        } else {
+            // Existing stabilization sleep when warmup is disabled
+            try await Task.sleep(for: .milliseconds(500))
         }
 
         // Capture photo via delegate callback → continuation
@@ -264,7 +290,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             continuation.resume(throwing: error)
         }
     }
-
+    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // No-op, just to keep the pipeline running
+    }
     // MARK: - Image Processing
 
     private func processImage(data: Data) throws -> Data {

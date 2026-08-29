@@ -55,8 +55,10 @@ struct AppConfig: Sendable {
         var silent: Bool
         var debounceSeconds: Int
         var cameraUniqueID: String?
+        var exposureWarmupEnabled: Bool
+        var exposureWarmupDuration: Double
 
-        static let `default` = CaptureConfig(silent: true, debounceSeconds: 3, cameraUniqueID: nil)
+        static let `default` = CaptureConfig(silent: true, debounceSeconds: 3, cameraUniqueID: nil, exposureWarmupEnabled: true, exposureWarmupDuration: 2.0)
     }
 
     struct LoggingConfig: Sendable {
@@ -125,6 +127,11 @@ struct AppConfig: Sendable {
         if config.capture.debounceSeconds < 0 {
             Log.config.warning("capture.debounceSeconds \(config.capture.debounceSeconds) is negative; setting to 0")
             config.capture.debounceSeconds = 0
+        }
+        // exposureWarmupDuration >= 0
+        if config.capture.exposureWarmupDuration < 0 {
+            Log.config.warning("capture.exposureWarmupDuration \(config.capture.exposureWarmupDuration) is negative; setting to 0")
+            config.capture.exposureWarmupDuration = 0
         }
 
         if let cameraUniqueID = config.capture.cameraUniqueID {
