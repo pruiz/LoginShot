@@ -1,28 +1,33 @@
 ---
 schema: maquinator/phase1-analysis-v1
 ticket_id: pruiz.loginshot-26
-run_id: 5bd0b391-74a6-4642-851d-a894c949a876
-updated_at: 2026-08-29T15:30:53Z
+run_id: fe44280e-6e17-449c-a8f8-77a4a3ae8dba
+updated_at: 2026-08-29T17:50:20Z
 decision: NOOP
 repository: LoginShot
 questions: []
 ---
-
 ## Assessment
-The feature "Exposure warmup and focus centering" has already been implemented in the LoginShot repository. The implementation includes configurable flags (enableExposureWarmup and exposureWarmupDuration) in the YAML configuration, logic to center the exposure and focus points of interest, and a warmup delay before capture.
+The exposure warmup and focus centering feature is already implemented in the LoginShot application. The capture service includes configuration options to enable/disable the warmup and set its duration, and when enabled it configures the camera's exposure point of interest and focus point of interest to the center of the frame.
 
 ## Evidence And Assumptions
-Evidence: The commit c445b0a titled "Implement exposure warmup and focus centering" adds the necessary changes to AppConfig.swift, CaptureService.swift, AppDelegate.swift, and the mock. The code shows that the configuration is used and the warmup logic is performed.
-Assumptions: The implementation is correct and complete as per the ticket requirements.
+- Examination of `LoginShotApp/Capture/CaptureService.swift` shows the `captureJPEG` method accepts parameters `enableExposureWarmup: Bool` and `exposureWarmupDuration: Double`.
+- When `enableExposureWarmup` is true, the code calls `configureCenterExposure(device:)` and `configureCenterFocus(device:)` to set the point of interest to `(0.5, 0.5)` (center) before starting the session and waiting for the specified duration.
+- The `AppDelegate.swift` passes these values from the configuration: `enableExposureWarmup: config.capture.enableExposureWarmup` and `exposureWarmupDuration: config.capture.exposureWarmupDuration`.
+- The `AppConfig.swift` defines `CaptureConfig` with fields `enableExposureWarmup` (default `true`) and `exposureWarmupDuration` (default `2.0`), and validates that the duration is non-negative.
+- Therefore, the feature is fully configurable via the YAML configuration file under the `capture` section.
 
 ## Implementation Plan
-No implementation is needed as the feature is already present.
+No implementation is required; the feature is already present and functional.
 
 ## Risks
-No risks since no changes are required.
+No risks identified since no changes are needed.
 
 ## Validation
-Validation can be done by verifying that the configuration options are present and that the camera behaves as expected when the flags are toggled. However, since no changes are required, no further validation is needed for this analysis.
+To validate the behavior:
+1. Set `capture.enableExposureWarmup: false` in the configuration and verify that the capture does not configure center exposure/focus (the device's existing settings remain).
+2. Set `capture.enableExposureWarmup: true` and adjust `capture.exposureWarmupDuration` to different values, confirming that the capture waits the specified duration before taking the photo.
+3. Existing unit tests in the repository (e.g., `LoginShotTests`) can be extended to test these paths, but the current implementation appears correct.
 
 ## Summary
-The exposure warmup and focus centering feature has been implemented as configurable options in the LoginShot application. The implementation includes the necessary configuration parameters, logic to center exposure and focus, and a warmup delay. No further repository changes are required.
+The exposure warmup and focus centering feature requested in the ticket is already implemented as a configurable option in the LoginShot application. Users can enable or disable the warmup and set its duration via the YAML configuration (`capture.enableExposureWarmup` and `capture.exposureWarmupDuration`). When enabled, the application centers the exposure and focus points of interest before capturing, improving image consistency. No further repository changes are required.
