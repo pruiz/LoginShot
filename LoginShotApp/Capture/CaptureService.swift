@@ -54,7 +54,9 @@ protocol CaptureServiceProtocol: Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        enableExposureWarmup: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult
     func listCameras() -> [CameraDeviceDescriptor]
 }
@@ -68,7 +70,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        enableExposureWarmup: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult {
         try await OneShotCapture.perform(
             maxWidth: maxWidth,
@@ -76,7 +80,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
             cameraUniqueID: cameraUniqueID,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            enableExposureWarmup: enableExposureWarmup,
+            exposureWarmupDuration: exposureWarmupDuration
         )
     }
 
@@ -102,8 +108,7 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
 /// Manages a single AVCaptureSession lifecycle: setup → capture → teardown.
 /// Uses @unchecked Sendable because all AVFoundation state is accessed
 /// sequentially (never concurrently) through the async run() method.
-private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
-
+private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
     private let maxWidth: Int
     private let quality: Double
     private var continuation: CheckedContinuation<CaptureResult, Error>?
@@ -114,13 +119,17 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     private let watermarkFormat: String
     private let hostname: String
 
-    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String) {
+    private let enableExposureWarmup: Bool
+    private let exposureWarmupDuration: Double
+    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String, enableExposureWarmup: Bool, exposureWarmupDuration: Double) {
         self.maxWidth = maxWidth
         self.quality = quality
         self.watermarkEnabled = watermarkEnabled
         self.watermarkFormat = watermarkFormat
         self.hostname = hostname
         super.init()
+        self.enableExposureWarmup = enableExposureWarmup
+        self.exposureWarmupDuration = exposureWarmupDuration
     }
 
     /// Entry point: check authorization, find camera, capture, return JPEG data.
@@ -130,7 +139,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        enableExposureWarmup: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult {
         // 1. Check / request camera authorization
         try await ensureCameraAuthorization()
@@ -141,9 +152,11 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             quality: quality,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            enableExposureWarmup: enableExposureWarmup,
+            exposureWarmupDuration: exposureWarmupDuration
         )
-        return try await capture.run(cameraUniqueID: cameraUniqueID)
+        return try await capture.run(cameraUniqueID: cameraUniqueID, enableExposureWarmup: enableExposureWarmup, exposureWarmupDuration: exposureWarmupDuration)
     }
 
     // MARK: - Authorization
@@ -169,8 +182,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
 
     // MARK: - Capture
 
-    private func run(cameraUniqueID: String?) async throws -> CaptureResult {
-        // Find selected or default video device
+    private func run(cameraUniqueID: String?, enableExposureWarmup: Bool, exposureWarmupDuration: Double) async throws -> CaptureResult {        // Find selected or default video device
         guard let device = selectCamera(cameraUniqueID: cameraUniqueID) else {
             throw CaptureError.cameraUnavailable("No video capture device found")
         }
@@ -202,9 +214,28 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         session.addOutput(output)
 
         // Start session and allow camera sensor to stabilize (exposure, white balance)
-        session.startRunning()
-
-        try await Task.sleep(for: .milliseconds(500))
+        if enableExposureWarmup {
+            // Configure center exposure and focus
+            configureCenterExposure(device: device)
+            configureCenterFocus(device: device)
+            // Add video output for warmup
+            let videoOutput = AVCaptureVideoDataOutput()
+            videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "videoDataOutputQueue"))
+            guard session.canAddOutput(videoOutput) else {
+                throw CaptureError.captureFailed("Cannot add video output to capture session")
+            }
+            session.addOutput(videoOutput)
+            // Start session
+            session.startRunning()
+            // Wait for warmup duration
+            try await Task.sleep(for: .seconds(exposureWarmupDuration))
+            // Remove video output
+            session.removeOutput(videoOutput)
+        } else {
+            // Start session and allow camera sensor to stabilize (exposure, white balance)
+            session.startRunning()
+            try await Task.sleep(for: .milliseconds(500))
+        }
 
         guard session.isRunning else {
             throw CaptureError.captureFailed("Capture session failed to start")
@@ -373,6 +404,32 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         return discovery.devices.first
     }
 
+    private func configureCenterExposure(device: AVCaptureDevice) {
+        if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.continuousAutoExposure) {
+            do {
+                try device.lockForConfiguration()
+                device.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                device.exposureMode = .continuousAutoExposure
+                device.unlockForConfiguration()
+            } catch {
+                Log.capture.warning("Failed to configure center exposure: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func configureCenterFocus(device: AVCaptureDevice) {
+        if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.continuousAutoFocus) {
+            do {
+                try device.lockForConfiguration()
+                device.focusPointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                device.focusMode = .continuousAutoFocus
+                device.unlockForConfiguration()
+            } catch {
+                Log.capture.warning("Failed to configure center focus: \(error.localizedDescription)")
+            }
+        }
+    }
+
     private func applyWatermark(to image: CGImage) throws -> CGImage {
         guard let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
@@ -431,4 +488,5 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         Log.capture.debug("Applied watermark to capture")
         return watermarked
     }
+    nonisolated func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {}
 }

@@ -26,6 +26,8 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
     var lastWatermarkEnabled: Bool?
     var lastWatermarkFormat: String?
     var lastHostname: String?
+    var lastEnableExposureWarmup: Bool?
+    var lastExposureWarmupDuration: Double?
 
     func captureJPEG(
         maxWidth: Int,
@@ -33,7 +35,9 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        enableExposureWarmup: Bool,
+        exposureWarmupDuration: Double
     ) async throws -> CaptureResult {
         captureCallCount += 1
         lastMaxWidth = maxWidth
@@ -42,6 +46,8 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         lastWatermarkEnabled = watermarkEnabled
         lastWatermarkFormat = watermarkFormat
         lastHostname = hostname
+        lastEnableExposureWarmup = enableExposureWarmup
+        lastExposureWarmupDuration = exposureWarmupDuration
 
         if let delay = captureDelay {
             try await Task.sleep(for: delay)
@@ -50,12 +56,12 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         return try captureResult.get()
     }
 
-    func listCameras() -> [CameraDeviceDescriptor] {
+    func listCameras() -> [CameraDeviceDescriptor] [
         [
             CameraDeviceDescriptor(uniqueID: "camera-1", deviceName: "FaceTime HD Camera", position: "front"),
             CameraDeviceDescriptor(uniqueID: "camera-2", deviceName: "External USB Camera", position: "unspecified")
         ]
-    }
+    ]
 
     // MARK: - Test Helpers
 
@@ -78,6 +84,8 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         lastWatermarkEnabled = nil
         lastWatermarkFormat = nil
         lastHostname = nil
+        lastEnableExposureWarmup = nil
+        lastExposureWarmupDuration = nil
         captureResult = .success(
             CaptureResult(jpegData: Data([0xFF, 0xD8, 0xFF, 0xE0]), cameraInfo: .unknown)
         )
