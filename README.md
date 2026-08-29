@@ -5,7 +5,7 @@
 LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login), when the session is **unlocked**, and optionally when it is **locked** (best-effort), then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine. (PoC of original idea by @aramosf)
 
 > **Privacy notice**
-> This tool records images from your Mac’s camera. Use it only on devices you own/administer, and only in compliance with applicable laws and policies. In many places you must disclose camera-based monitoring.
+> This tool records images from your Mac's camera. Use it only on devices you own/administer, and only in compliance with applicable laws and policies. In many places you must disclose camera-based monitoring.
 
 ## v1 Scope
 
@@ -25,7 +25,7 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
 
 ### Not included (for now)
 - Cloud upload via Dropbox/Google Drive APIs
-- Face recognition / “is this me?” alerts
+- Face recognition / "is this me?" alerts
 - Notarization / signing (future)
 - Retention policy (no deletion)
 
@@ -152,6 +152,7 @@ If no config file is found, LoginShot uses these defaults:
 - **Debounce:** 3 seconds
 - **File logging:** disabled (uses macOS unified logging by default)
 - **Watermark:** enabled (`<hostname> <timestamp>`)
+- **Exposure warmup:** enabled (2.0 seconds warmup duration)
 
 ### YAML example
 ```yaml
@@ -176,6 +177,8 @@ capture:
   silent: true           # no effect in v1 (macOS has no shutter sound); reserved for future use
   debounceSeconds: 3
   cameraUniqueID: null   # null = automatic/default camera selection
+  exposureWarmupEnabled: true   # enable warmup pipeline before capture
+  exposureWarmupDuration: 2.0   # warmup duration in seconds
 
 logging:
   enableFileLogging: false
@@ -191,6 +194,21 @@ watermark:
 
 When watermarking is enabled, LoginShot overlays `<hostname> <timestamp>` on saved images.
 If `watermark.format` is empty/invalid, LoginShot falls back to `yyyy-MM-dd HH:mm:ss zzz`.
+
+### Capture settings detail
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `silent` | bool | `true` | Reserved for future use (macOS has no shutter sound for still captures). |
+| `debounceSeconds` | int | `3` | Minimum interval between unlock-triggered captures. |
+| `cameraUniqueID` | string/null | `null` | Specific camera by unique ID; `null` = automatic. |
+| `exposureWarmupEnabled` | bool | `true` | Run warmup pipeline (video frames + center metering on iOS) before still capture. |
+| `exposureWarmupDuration` | float | `2.0` | Seconds to run warmup when enabled. Negative values are clamped to 0. |
+
+**Behavior:**
+- When `exposureWarmupEnabled: true`, LoginShot adds a video data output to the capture session, starts the session, configures center-weighted exposure metering (iOS only), and waits `exposureWarmupDuration` seconds before capturing the still image. This allows auto-exposure and auto-white-balance to settle.
+- When `exposureWarmupEnabled: false`, the original behavior is preserved: a brief 500 ms stabilization sleep after starting the session.
+- The warmup feature adds latency equal to `exposureWarmupDuration` (default 2 s) but can improve image quality in variable lighting.
 
 ## Output files
 
@@ -274,7 +292,7 @@ log show --last 10m --predicate 'subsystem == "dev.pruiz.LoginShot"'
 ## Troubleshooting
 - **No camera prompt / capture fails**
   - System Settings → Privacy & Security → Camera → enable LoginShot.
-- **Unlock capture doesn’t trigger**
+- **Unlock capture doesn't trigger**
   - Unlock signals vary by macOS version. We may combine NSWorkspace + distributed notifications to make this robust.
 - **Lock capture behaves inconsistently**
   - `onLock` is best-effort on macOS and may fire during related session-inactive transitions (for example, fast user switching).

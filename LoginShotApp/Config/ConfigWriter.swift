@@ -104,6 +104,17 @@ enum ConfigWriter {
           # Camera unique identifier. null = automatic/default camera.
           cameraUniqueID: null
 
+          # Enable exposure warmup and focus centering before capture.
+          # When true, the camera runs a warmup pipeline for the specified
+          # duration to let auto-exposure/auto-white-balance settle, and
+          # centers the exposure metering area (iOS only).
+          exposureWarmupEnabled: true
+
+          # Duration in seconds to run the warmup pipeline.
+          # Only used when exposureWarmupEnabled is true.
+          # Default: 2.0 seconds. Values < 0 are clamped to 0.
+          exposureWarmupDuration: 2.0
+
         logging:
           # Write app logs to files in addition to macOS unified logging.
           # Default false keeps logging fully OS-managed.
@@ -160,6 +171,8 @@ enum ConfigWriter {
           silent: \(config.capture.silent)
           debounceSeconds: \(config.capture.debounceSeconds)
           cameraUniqueID: \(cameraUniqueID)
+          exposureWarmupEnabled: \(config.capture.exposureWarmupEnabled)
+          exposureWarmupDuration: \(String(format: "%.1f", config.capture.exposureWarmupDuration))
 
         logging:
           enableFileLogging: \(config.logging.enableFileLogging)

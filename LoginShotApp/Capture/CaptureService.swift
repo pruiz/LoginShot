@@ -80,7 +80,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
             cameraUniqueID: cameraUniqueID,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            exposureWarmupEnabled: exposureWarmupEnabled,
+            exposureWarmupDuration: exposureWarmupDuration
         )
     }
 
@@ -117,6 +119,8 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
     private let watermarkEnabled: Bool
     private let watermarkFormat: String
     private let hostname: String
+    private let exposureWarmupEnabled: Bool
+    private let exposureWarmupDuration: Double
 
     private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String, exposureWarmupEnabled: Bool, exposureWarmupDuration: Double) {
         self.maxWidth = maxWidth
@@ -148,7 +152,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
             quality: quality,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            exposureWarmupEnabled: exposureWarmupEnabled,
+            exposureWarmupDuration: exposureWarmupDuration
         )
         return try await capture.run(cameraUniqueID: cameraUniqueID)
     }
@@ -223,13 +229,13 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         session.startRunning()
 
         if exposureWarmupEnabled {
-            # Configure center exposure and lock exposure (iOS only)
+            // Configure center exposure and lock exposure (iOS only)
             #if !os(macOS)
             configureCenterExposure(device)
             lockExposureAtCurrent(device)
             #endif
             
-            # Wait for exposure warmup duration
+            // Wait for exposure warmup duration
             try await Task.sleep(for: .seconds(exposureWarmupDuration))
         } else {
             // Existing stabilization sleep when warmup is disabled
@@ -240,7 +246,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         let result: CaptureResult = try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             let settings = AVCapturePhotoSettings()
-            output.capturePhoto(with: settings, delegate: self)
+            photoOutput.capturePhoto(with: settings, delegate: self)
         }
 
         // Tear down: remove inputs/outputs before stopping to avoid

@@ -118,7 +118,9 @@ enum ConfigLoader {
         let capture = AppConfig.CaptureConfig(
             silent: captureDict["silent"] as? Bool ?? true,
             debounceSeconds: extractInt(captureDict["debounceSeconds"], default: 3),
-            cameraUniqueID: captureDict["cameraUniqueID"] as? String
+            cameraUniqueID: captureDict["cameraUniqueID"] as? String,
+            exposureWarmupEnabled: captureDict["exposureWarmupEnabled"] as? Bool ?? true,
+            exposureWarmupDuration: extractDouble(captureDict["exposureWarmupDuration"], default: 2.0)
         )
 
         let logging = AppConfig.LoggingConfig(
