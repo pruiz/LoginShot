@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreMedia
 import CoreText
 import Foundation
 import ImageIO
@@ -54,7 +55,9 @@ protocol CaptureServiceProtocol: Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmUpSeconds: Int,
+        centerMeteringEnabled: Bool
     ) async throws -> CaptureResult
     func listCameras() -> [CameraDeviceDescriptor]
 }
@@ -68,7 +71,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmUpSeconds: Int,
+        centerMeteringEnabled: Bool
     ) async throws -> CaptureResult {
         try await OneShotCapture.perform(
             maxWidth: maxWidth,
@@ -76,7 +81,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
             cameraUniqueID: cameraUniqueID,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            exposureWarmUpSeconds: exposureWarmUpSeconds,
+            centerMeteringEnabled: centerMeteringEnabled
         )
     }
 
@@ -106,6 +113,8 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
 
     private let maxWidth: Int
     private let quality: Double
+    private let exposureWarmUpSeconds: Int
+    private let centerMeteringEnabled: Bool
     private var continuation: CheckedContinuation<CaptureResult, Error>?
     private var deviceName: String = "Unknown"
     private var devicePosition: String = "unknown"
@@ -114,12 +123,22 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
     private let watermarkFormat: String
     private let hostname: String
 
-    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String) {
+    private init(
+        maxWidth: Int,
+        quality: Double,
+        watermarkEnabled: Bool,
+        watermarkFormat: String,
+        hostname: String,
+        exposureWarmUpSeconds: Int,
+        centerMeteringEnabled: Bool
+    ) {
         self.maxWidth = maxWidth
         self.quality = quality
         self.watermarkEnabled = watermarkEnabled
         self.watermarkFormat = watermarkFormat
         self.hostname = hostname
+        self.exposureWarmUpSeconds = max(0, exposureWarmUpSeconds)
+        self.centerMeteringEnabled = centerMeteringEnabled
         super.init()
     }
 
@@ -130,7 +149,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmUpSeconds: Int,
+        centerMeteringEnabled: Bool
     ) async throws -> CaptureResult {
         // 1. Check / request camera authorization
         try await ensureCameraAuthorization()
@@ -141,7 +162,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             quality: quality,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            exposureWarmUpSeconds: exposureWarmUpSeconds,
+            centerMeteringEnabled: centerMeteringEnabled
         )
         return try await capture.run(cameraUniqueID: cameraUniqueID)
     }
@@ -195,16 +218,36 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         }
         session.addInput(input)
 
-        let output = AVCapturePhotoOutput()
-        guard session.canAddOutput(output) else {
+        // Configure center-weighted exposure metering if enabled
+        if centerMeteringEnabled {
+            Self.configureCenterExposure(device: device)
+        }
+
+        let photoOutput = AVCapturePhotoOutput()
+        guard session.canAddOutput(photoOutput) else {
             throw CaptureError.captureFailed("Cannot add photo output to capture session")
         }
-        session.addOutput(output)
+        session.addOutput(photoOutput)
+
+        // Add video data output for exposure warm-up (runs pipeline to let AE/AWB settle)
+        // Only install when warm-up is enabled (exposureWarmUpSeconds > 0)
+        if exposureWarmUpSeconds > 0 {
+            let videoOutput = AVCaptureVideoDataOutput()
+            let videoQueue = DispatchQueue(label: "dev.pruiz.LoginShot.video-output")
+            videoOutput.setSampleBufferDelegate(self, queue: videoQueue)
+            guard session.canAddOutput(videoOutput) else {
+                throw CaptureError.captureFailed("Cannot add video output to capture session")
+            }
+            session.addOutput(videoOutput)
+        }
 
         // Start session and allow camera sensor to stabilize (exposure, white balance)
         session.startRunning()
 
-        try await Task.sleep(for: .milliseconds(500))
+        if exposureWarmUpSeconds > 0 {
+            Log.capture.info("Warming up exposure for \(exposureWarmUpSeconds) second(s)...")
+            try await Task.sleep(for: .seconds(exposureWarmUpSeconds))
+        }
 
         guard session.isRunning else {
             throw CaptureError.captureFailed("Capture session failed to start")
@@ -214,7 +257,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         let result: CaptureResult = try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             let settings = AVCapturePhotoSettings()
-            output.capturePhoto(with: settings, delegate: self)
+            photoOutput.capturePhoto(with: settings, delegate: self)
         }
 
         // Tear down: remove inputs/outputs before stopping to avoid
@@ -373,6 +416,28 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         return discovery.devices.first
     }
 
+    /// Configure center-weighted exposure metering.
+    /// Sets exposurePointOfInterest to the frame center (0.5, 0.5) and
+    /// exposureMode to continuousAutoExposure if supported by the device.
+    private static func configureCenterExposure(device: AVCaptureDevice) {
+        do {
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+
+            if device.isExposurePointOfInterestSupported {
+                device.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                if device.isExposureModeSupported(.continuousAutoExposure) {
+                    device.exposureMode = .continuousAutoExposure
+                }
+                Log.capture.info("Configured center-weighted exposure metering (point: 0.5, 0.5)")
+            } else {
+                Log.capture.info("Camera does not support exposurePointOfInterest; using default metering")
+            }
+        } catch {
+            Log.capture.warning("Failed to lock device for exposure configuration: \(error.localizedDescription)")
+        }
+    }
+
     private func applyWatermark(to image: CGImage) throws -> CGImage {
         guard let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
@@ -432,3 +497,23 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         return watermarked
     }
 }
+
+
+// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate Extension
+
+
+
+extension OneShotCapture: AVCaptureVideoDataOutputSampleBufferDelegate {
+    /// No-op delegate to keep the video pipeline running during warm-up.
+    /// The sample buffers are discarded; the mere act of delivering them
+    /// forces the AE/AWB algorithms to process frames and converge.
+    @objc nonisolated func captureOutput(
+        _ output: AVCaptureVideoDataOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        // Intentionally empty — warm-up is driven by pipeline activity.
+    }
+}
+
+

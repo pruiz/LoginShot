@@ -143,6 +143,8 @@ final class AppDelegateTests: XCTestCase {
         config.capture.cameraUniqueID = "camera-2"
         config.watermark.enabled = true
         config.watermark.format = "yyyy/MM/dd HH:mm"
+        config.capture.exposureWarmUpSeconds = 5
+        config.capture.centerMeteringEnabled = false
 
         let delegate = makeAppDelegate(config: config)
         delegate.reloadConfig()
@@ -156,6 +158,8 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(mockCaptureService.lastCameraUniqueID, "camera-2")
         XCTAssertEqual(mockCaptureService.lastWatermarkEnabled, true)
         XCTAssertEqual(mockCaptureService.lastWatermarkFormat, "yyyy/MM/dd HH:mm")
+        XCTAssertEqual(mockCaptureService.lastExposureWarmUpSeconds, 5)
+        XCTAssertEqual(mockCaptureService.lastCenterMeteringEnabled, false)
         XCTAssertNotNil(mockCaptureService.lastHostname)
     }
 

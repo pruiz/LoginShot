@@ -20,6 +20,8 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertEqual(config.capture.exposureWarmUpSeconds, 2)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
@@ -127,5 +129,28 @@ final class AppConfigTests: XCTestCase {
         let validated = config.validated()
 
         XCTAssertEqual(validated.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
+    }
+
+    // MARK: - Validation: exposureWarmUpSeconds
+
+    func testValidationFixesNegativeExposureWarmUp() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpSeconds = -5
+        let validated = config.validated()
+        XCTAssertEqual(validated.capture.exposureWarmUpSeconds, 0)
+    }
+
+    func testValidationKeepsZeroExposureWarmUp() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpSeconds = 0
+        let validated = config.validated()
+        XCTAssertEqual(validated.capture.exposureWarmUpSeconds, 0)
+    }
+
+    func testValidationKeepsPositiveExposureWarmUp() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpSeconds = 5
+        let validated = config.validated()
+        XCTAssertEqual(validated.capture.exposureWarmUpSeconds, 5)
     }
 }

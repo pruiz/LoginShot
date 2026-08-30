@@ -24,6 +24,8 @@ final class ConfigLoaderTests: XCTestCase {
           silent: false
           debounceSeconds: 5
           cameraUniqueID: "camera-abc"
+          exposureWarmUpSeconds: 4
+          centerMeteringEnabled: false
         logging:
           enableFileLogging: true
           directory: "~/Library/Logs/LoginShot"
@@ -50,6 +52,8 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertFalse(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 5)
         XCTAssertEqual(config.capture.cameraUniqueID, "camera-abc")
+        XCTAssertEqual(config.capture.exposureWarmUpSeconds, 4)
+        XCTAssertFalse(config.capture.centerMeteringEnabled)
         XCTAssertTrue(config.logging.enableFileLogging)
         XCTAssertEqual(config.logging.retentionDays, 7)
         XCTAssertEqual(config.logging.cleanupIntervalHours, 12)
@@ -82,6 +86,8 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertEqual(config.capture.exposureWarmUpSeconds, 2)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
         XCTAssertFalse(config.logging.enableFileLogging)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
@@ -215,5 +221,75 @@ final class ConfigLoaderTests: XCTestCase {
 
         XCTAssertFalse(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, "yyyy/MM/dd HH:mm")
+    }
+
+    // MARK: - New capture config fields
+
+    func testParsesExposureWarmUpSeconds() throws {
+        let yaml = """
+        capture:
+          exposureWarmUpSeconds: 5
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.exposureWarmUpSeconds, 5)
+    }
+
+    func testParsesExposureWarmUpSecondsAsFloat() throws {
+        let yaml = """
+        capture:
+          exposureWarmUpSeconds: 3.0
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.exposureWarmUpSeconds, 3)
+    }
+
+    func testParsesExposureWarmUpSecondsDefaultsToTwo() throws {
+        let yaml = """
+        capture:
+          debounceSeconds: 3
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.exposureWarmUpSeconds, 2)
+    }
+
+    func testParsesCenterMeteringEnabled() throws {
+        let yaml = """
+        capture:
+          centerMeteringEnabled: false
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertFalse(config.capture.centerMeteringEnabled)
+    }
+
+    func testParsesCenterMeteringEnabledDefaultsToTrue() throws {
+        let yaml = """
+        capture:
+          debounceSeconds: 3
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
+    }
+
+    func testParsesCenterMeteringEnabledAsStringCoercesToBool() throws {
+        // YAML may parse "true" as String in some contexts
+        let yaml = """
+        capture:
+          centerMeteringEnabled: "true"
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        // String "true" is not Bool, so falls back to default true
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
     }
 }
