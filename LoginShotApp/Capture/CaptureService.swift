@@ -109,7 +109,7 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
 /// Manages a single AVCaptureSession lifecycle: setup → capture → teardown.
 /// Uses @unchecked Sendable because all AVFoundation state is accessed
 /// sequentially (never concurrently) through the async run() method.
-private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
+private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
 
     private let maxWidth: Int
     private let quality: Double
@@ -308,19 +308,6 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         }
     }
 
-    // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
-
-    /// No-op delegate to keep the video pipeline running during warm-up.
-    /// The sample buffers are discarded; the mere act of delivering them
-    /// forces the AE/AWB algorithms to process frames and converge.
-    nonisolated func captureOutput(
-        _ output: AVCaptureVideoDataOutput,
-        didOutput sampleBuffer: CMSampleBuffer,
-        from connection: AVCaptureConnection
-    ) {
-        // Intentionally empty — warm-up is driven by pipeline activity.
-    }
-
     // MARK: - Image Processing
 
     private func processImage(data: Data) throws -> Data {
@@ -510,3 +497,23 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         return watermarked
     }
 }
+
+
+// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate Extension
+
+
+
+extension OneShotCapture: AVCaptureVideoDataOutputSampleBufferDelegate {
+    /// No-op delegate to keep the video pipeline running during warm-up.
+    /// The sample buffers are discarded; the mere act of delivering them
+    /// forces the AE/AWB algorithms to process frames and converge.
+    @objc nonisolated func captureOutput(
+        _ output: AVCaptureVideoDataOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        // Intentionally empty — warm-up is driven by pipeline activity.
+    }
+}
+
+
