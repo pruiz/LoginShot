@@ -172,7 +172,7 @@ enum ConfigWriter {
           debounceSeconds: \(config.capture.debounceSeconds)
           cameraUniqueID: \(cameraUniqueID)
           exposureWarmupEnabled: \(config.capture.exposureWarmupEnabled)
-          exposureWarmupDuration: \(String(format: "%.1f", config.capture.exposureWarmupDuration))
+          exposureWarmupDuration: \(config.capture.exposureWarmupDuration)
 
         logging:
           enableFileLogging: \(config.logging.enableFileLogging)
