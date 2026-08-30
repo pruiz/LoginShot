@@ -152,6 +152,7 @@ If no config file is found, LoginShot uses these defaults:
 - **Debounce:** 3 seconds
 - **File logging:** disabled (uses macOS unified logging by default)
 - **Watermark:** enabled (`<hostname> <timestamp>`)
+- **Capture warm-up:** enabled (2s exposure warm-up with center metering)
 
 ### YAML example
 ```yaml
@@ -176,6 +177,9 @@ capture:
   silent: true           # no effect in v1 (macOS has no shutter sound); reserved for future use
   debounceSeconds: 3
   cameraUniqueID: null   # null = automatic/default camera selection
+  exposureWarmUpEnabled: true      # briefly prime the camera so auto-exposure can settle
+  exposureWarmUpMilliseconds: 2000 # warm-up duration; 0 keeps centering without an added delay
+  centerMeteringEnabled: true      # meter exposure from the center of the frame
 
 logging:
   enableFileLogging: false
@@ -191,6 +195,8 @@ watermark:
 
 When watermarking is enabled, LoginShot overlays `<hostname> <timestamp>` on saved images.
 If `watermark.format` is empty/invalid, LoginShot falls back to `yyyy-MM-dd HH:mm:ss zzz`.
+
+For cameras that tend to underexpose the first frame, LoginShot now warms the capture pipeline briefly before taking the still image and can bias exposure metering toward the center of the frame. Use `capture.exposureWarmUpEnabled`, `capture.exposureWarmUpMilliseconds`, and `capture.centerMeteringEnabled` to tune or disable that behavior.
 
 ## Output files
 

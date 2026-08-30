@@ -156,6 +156,9 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(mockCaptureService.lastCameraUniqueID, "camera-2")
         XCTAssertEqual(mockCaptureService.lastWatermarkEnabled, true)
         XCTAssertEqual(mockCaptureService.lastWatermarkFormat, "yyyy/MM/dd HH:mm")
+        XCTAssertEqual(mockCaptureService.lastExposureWarmUpEnabled, true)
+        XCTAssertEqual(mockCaptureService.lastExposureWarmUpMilliseconds, 2000)
+        XCTAssertEqual(mockCaptureService.lastCenterMeteringEnabled, true)
         XCTAssertNotNil(mockCaptureService.lastHostname)
     }
 
