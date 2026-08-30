@@ -230,13 +230,16 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         session.addOutput(photoOutput)
 
         // Add video data output for exposure warm-up (runs pipeline to let AE/AWB settle)
-        let videoOutput = AVCaptureVideoDataOutput()
-        let videoQueue = DispatchQueue(label: "dev.pruiz.LoginShot.video-output")
-        videoOutput.setSampleBufferDelegate(self, queue: videoQueue)
-        guard session.canAddOutput(videoOutput) else {
-            throw CaptureError.captureFailed("Cannot add video output to capture session")
+        // Only install when warm-up is enabled (exposureWarmUpSeconds > 0)
+        if exposureWarmUpSeconds > 0 {
+            let videoOutput = AVCaptureVideoDataOutput()
+            let videoQueue = DispatchQueue(label: "dev.pruiz.LoginShot.video-output")
+            videoOutput.setSampleBufferDelegate(self, queue: videoQueue)
+            guard session.canAddOutput(videoOutput) else {
+                throw CaptureError.captureFailed("Cannot add video output to capture session")
+            }
+            session.addOutput(videoOutput)
         }
-        session.addOutput(videoOutput)
 
         // Start session and allow camera sensor to stabilize (exposure, white balance)
         session.startRunning()

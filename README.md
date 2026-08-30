@@ -5,7 +5,7 @@
 LoginShot is a macOS background agent that captures a webcam snapshot when your **user session opens** (agent starts after login), when the session is **unlocked**, and optionally when it is **locked** (best-effort), then stores the image (plus metadata) into a configurable local folder (e.g. Dropbox/Google Drive sync folder) so you keep an audit trail of who used the machine. (PoC of original idea by @aramosf)
 
 > **Privacy notice**
-> This tool records images from your Mac’s camera. Use it only on devices you own/administer, and only in compliance with applicable laws and policies. In many places you must disclose camera-based monitoring.
+> This tool records images from your Mac's camera. Use it only on devices you own/administer, and only in compliance with applicable laws and policies. In many places you must disclose camera-based monitoring.
 
 ## v1 Scope
 
@@ -25,7 +25,7 @@ LoginShot is a macOS background agent that captures a webcam snapshot when your 
 
 ### Not included (for now)
 - Cloud upload via Dropbox/Google Drive APIs
-- Face recognition / “is this me?” alerts
+- Face recognition / "is this me?" alerts
 - Notarization / signing (future)
 - Retention policy (no deletion)
 
@@ -152,6 +152,8 @@ If no config file is found, LoginShot uses these defaults:
 - **Debounce:** 3 seconds
 - **File logging:** disabled (uses macOS unified logging by default)
 - **Watermark:** enabled (`<hostname> <timestamp>`)
+- **Exposure warm-up:** 2 seconds (runs video pipeline to let AE/AWB settle)
+- **Center metering:** enabled (center-weighted exposure at frame center)
 
 ### YAML example
 ```yaml
@@ -177,6 +179,17 @@ capture:
   debounceSeconds: 3
   cameraUniqueID: null   # null = automatic/default camera selection
 
+  # Seconds to run the video capture pipeline before taking the still photo.
+  # This allows auto-exposure (AE) and auto-white-balance (AWB) to converge.
+  # 0 = disable warm-up (capture immediately after session start).
+  # Default: 2
+  exposureWarmUpSeconds: 2
+
+  # When true, use center-weighted exposure metering (exposurePointOfInterest = 0.5, 0.5).
+  # This biases auto-exposure toward the center of the frame (typically the face).
+  # Default: true
+  centerMeteringEnabled: true
+
 logging:
   enableFileLogging: false
   directory: "~/Library/Logs/LoginShot"
@@ -188,6 +201,15 @@ watermark:
   enabled: true
   format: "yyyy-MM-dd HH:mm:ss zzz"
 ```
+
+### Capture Settings Details
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `exposureWarmUpSeconds` | Integer (≥0) | 2 | Seconds to run video pipeline before still capture. 0 = no warm-up (immediate capture). The pipeline runs a no-op video output delegate to drive AE/AWB convergence. |
+| `centerMeteringEnabled` | Boolean | true | When enabled, sets `exposurePointOfInterest` to frame center (0.5, 0.5) and `exposureMode` to `continuousAutoExposure` if the device supports it. Falls back gracefully on unsupported cameras. |
+
+**Latency impact:** The default 2-second warm-up adds ~2 seconds to each capture. For faster captures on cameras that settle quickly, reduce this value or set to 0. Center metering adds negligible latency.
 
 When watermarking is enabled, LoginShot overlays `<hostname> <timestamp>` on saved images.
 If `watermark.format` is empty/invalid, LoginShot falls back to `yyyy-MM-dd HH:mm:ss zzz`.
@@ -274,7 +296,7 @@ log show --last 10m --predicate 'subsystem == "dev.pruiz.LoginShot"'
 ## Troubleshooting
 - **No camera prompt / capture fails**
   - System Settings → Privacy & Security → Camera → enable LoginShot.
-- **Unlock capture doesn’t trigger**
+- **Unlock capture doesn't trigger**
   - Unlock signals vary by macOS version. We may combine NSWorkspace + distributed notifications to make this robust.
 - **Lock capture behaves inconsistently**
   - `onLock` is best-effort on macOS and may fire during related session-inactive transitions (for example, fast user switching).
