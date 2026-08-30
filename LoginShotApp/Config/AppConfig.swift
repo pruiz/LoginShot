@@ -55,8 +55,21 @@ struct AppConfig: Sendable {
         var silent: Bool
         var debounceSeconds: Int
         var cameraUniqueID: String?
+        /// Duration in seconds to run the video pipeline before still capture,
+        /// allowing auto-exposure and auto-white-balance to settle.
+        /// Set to 0 to disable warm-up.
+        var exposureWarmUpSeconds: Int
+        /// When true, set exposurePointOfInterest to the frame center (0.5, 0.5)
+        /// and use continuous auto-exposure for center-weighted metering.
+        var centerMeteringEnabled: Bool
 
-        static let `default` = CaptureConfig(silent: true, debounceSeconds: 3, cameraUniqueID: nil)
+        static let `default` = CaptureConfig(
+            silent: true,
+            debounceSeconds: 3,
+            cameraUniqueID: nil,
+            exposureWarmUpSeconds: 2,
+            centerMeteringEnabled: true
+        )
     }
 
     struct LoggingConfig: Sendable {
@@ -125,6 +138,12 @@ struct AppConfig: Sendable {
         if config.capture.debounceSeconds < 0 {
             Log.config.warning("capture.debounceSeconds \(config.capture.debounceSeconds) is negative; setting to 0")
             config.capture.debounceSeconds = 0
+        }
+
+        // exposureWarmUpSeconds >= 0
+        if config.capture.exposureWarmUpSeconds < 0 {
+            Log.config.warning("capture.exposureWarmUpSeconds \(config.capture.exposureWarmUpSeconds) is negative; setting to 0")
+            config.capture.exposureWarmUpSeconds = 0
         }
 
         if let cameraUniqueID = config.capture.cameraUniqueID {

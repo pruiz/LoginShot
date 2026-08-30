@@ -26,6 +26,8 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
     var lastWatermarkEnabled: Bool?
     var lastWatermarkFormat: String?
     var lastHostname: String?
+    var lastExposureWarmUpSeconds: Int?
+    var lastCenterMeteringEnabled: Bool?
 
     func captureJPEG(
         maxWidth: Int,
@@ -33,7 +35,9 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        exposureWarmUpSeconds: Int,
+        centerMeteringEnabled: Bool
     ) async throws -> CaptureResult {
         captureCallCount += 1
         lastMaxWidth = maxWidth
@@ -42,6 +46,8 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         lastWatermarkEnabled = watermarkEnabled
         lastWatermarkFormat = watermarkFormat
         lastHostname = hostname
+        lastExposureWarmUpSeconds = exposureWarmUpSeconds
+        lastCenterMeteringEnabled = centerMeteringEnabled
 
         if let delay = captureDelay {
             try await Task.sleep(for: delay)
@@ -78,6 +84,8 @@ final class MockCaptureService: CaptureServiceProtocol, @unchecked Sendable {
         lastWatermarkEnabled = nil
         lastWatermarkFormat = nil
         lastHostname = nil
+        lastExposureWarmUpSeconds = nil
+        lastCenterMeteringEnabled = nil
         captureResult = .success(
             CaptureResult(jpegData: Data([0xFF, 0xD8, 0xFF, 0xE0]), cameraInfo: .unknown)
         )
