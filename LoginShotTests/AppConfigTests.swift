@@ -20,6 +20,9 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertTrue(config.capture.exposureWarmUpEnabled)
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 2000)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
@@ -129,3 +132,13 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(validated.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
 }
+
+
+    func testValidationClampsNegativeExposureWarmUpMilliseconds() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = -100
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.exposureWarmUpMilliseconds, 0)
+    }

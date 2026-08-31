@@ -274,7 +274,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     cameraUniqueID: config.capture.cameraUniqueID,
                     watermarkEnabled: config.watermark.enabled,
                     watermarkFormat: config.watermark.format,
-                    hostname: ProcessInfo.processInfo.hostName
+                    hostname: ProcessInfo.processInfo.hostName,
+                    exposureWarmUpEnabled: config.capture.exposureWarmUpEnabled,
+                    exposureWarmUpMilliseconds: config.capture.exposureWarmUpMilliseconds,
+                    centerMeteringEnabled: config.capture.centerMeteringEnabled
                 )
 
                 // 2. Build metadata
@@ -527,7 +530,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     cameraUniqueID: selectedID,
                     watermarkEnabled: config.watermark.enabled,
                     watermarkFormat: config.watermark.format,
-                    hostname: ProcessInfo.processInfo.hostName
+                    hostname: ProcessInfo.processInfo.hostName,
+                    exposureWarmUpEnabled: config.capture.exposureWarmUpEnabled,
+                    exposureWarmUpMilliseconds: config.capture.exposureWarmUpMilliseconds,
+                    centerMeteringEnabled: config.capture.centerMeteringEnabled
                 )
                 alertPresenter.showInfo(title: "LoginShot", message: "Camera verification succeeded.")
             } catch {

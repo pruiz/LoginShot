@@ -24,6 +24,9 @@ final class ConfigLoaderTests: XCTestCase {
           silent: false
           debounceSeconds: 5
           cameraUniqueID: "camera-abc"
+          exposureWarmUpEnabled: false
+          exposureWarmUpMilliseconds: 1250
+          centerMeteringEnabled: false
         logging:
           enableFileLogging: true
           directory: "~/Library/Logs/LoginShot"
@@ -50,6 +53,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertFalse(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 5)
         XCTAssertEqual(config.capture.cameraUniqueID, "camera-abc")
+        XCTAssertFalse(config.capture.exposureWarmUpEnabled)
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 1250)
+        XCTAssertFalse(config.capture.centerMeteringEnabled)
         XCTAssertTrue(config.logging.enableFileLogging)
         XCTAssertEqual(config.logging.retentionDays, 7)
         XCTAssertEqual(config.logging.cleanupIntervalHours, 12)
@@ -82,6 +88,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertTrue(config.capture.exposureWarmUpEnabled)
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 2000)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
         XCTAssertFalse(config.logging.enableFileLogging)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)

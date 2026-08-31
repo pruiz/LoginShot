@@ -104,6 +104,15 @@ enum ConfigWriter {
           # Camera unique identifier. null = automatic/default camera.
           cameraUniqueID: null
 
+          # Briefly run the capture pipeline before shooting so auto-exposure can settle.
+          exposureWarmUpEnabled: true
+
+          # Warm-up duration in milliseconds. 0 disables the delay even when warm-up is enabled.
+          exposureWarmUpMilliseconds: 2000
+
+          # Meter exposure from the center of the frame, where the subject usually is.
+          centerMeteringEnabled: true
+
         logging:
           # Write app logs to files in addition to macOS unified logging.
           # Default false keeps logging fully OS-managed.
@@ -160,6 +169,9 @@ enum ConfigWriter {
           silent: \(config.capture.silent)
           debounceSeconds: \(config.capture.debounceSeconds)
           cameraUniqueID: \(cameraUniqueID)
+          exposureWarmUpEnabled: \(config.capture.exposureWarmUpEnabled)
+          exposureWarmUpMilliseconds: \(config.capture.exposureWarmUpMilliseconds)
+          centerMeteringEnabled: \(config.capture.centerMeteringEnabled)
 
         logging:
           enableFileLogging: \(config.logging.enableFileLogging)
