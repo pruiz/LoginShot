@@ -123,6 +123,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
     private let watermarkEnabled: Bool
     private let watermarkFormat: String
     private let hostname: String
+    private static let baselineStabilizationDuration: Duration = .milliseconds(500)
     private let exposureWarmUpEnabled: Bool
     private let exposureWarmUpDuration: Duration
     private let centerMeteringEnabled: Bool
@@ -253,9 +254,14 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
             throw CaptureError.captureFailed("Capture session failed to start")
         }
 
-        if exposureWarmUpEnabled && exposureWarmUpDuration > .zero {
-            Log.capture.debug("Warming exposure for \(String(describing: exposureWarmUpDuration)) before still capture")
-            try await Task.sleep(for: exposureWarmUpDuration)
+        let stabilizationDuration = captureStabilizationDuration()
+        if stabilizationDuration > .zero {
+            if exposureWarmUpEnabled && exposureWarmUpDuration > .zero {
+                Log.capture.debug("Warming exposure for \(String(describing: stabilizationDuration)) before still capture")
+            } else {
+                Log.capture.debug("Applying baseline camera stabilization for \(String(describing: stabilizationDuration)) before still capture")
+            }
+            try await Task.sleep(for: stabilizationDuration)
         }
 
         // Capture photo via delegate callback → continuation
@@ -277,6 +283,13 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         Log.capture.info("Capture complete (\(result.jpegData.count) bytes)")
 
         return result
+    }
+
+    private func captureStabilizationDuration() -> Duration {
+        if exposureWarmUpEnabled && exposureWarmUpDuration > .zero {
+            return exposureWarmUpDuration
+        }
+        return Self.baselineStabilizationDuration
     }
 
     private static func configureCenterExposure(device: AVCaptureDevice) {
