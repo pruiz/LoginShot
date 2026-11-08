@@ -152,6 +152,9 @@ If no config file is found, LoginShot uses these defaults:
 - **Debounce:** 3 seconds
 - **File logging:** disabled (uses macOS unified logging by default)
 - **Watermark:** enabled (`<hostname> <timestamp>`)
+- **Capture warm-up:** 2000 ms (minimum effective delay is 500 ms)
+- **Center metering:** enabled
+- **Dark-frame retry:** enabled (retry threshold: mean luminance `0.03`)
 
 ### YAML example
 ```yaml
@@ -177,6 +180,21 @@ capture:
   debounceSeconds: 3
   cameraUniqueID: null   # null = automatic/default camera selection
 
+  # Milliseconds to run the capture pipeline before taking the still photo,
+  # so auto-exposure and auto-white-balance can settle.
+  # Values below 500 are treated as 500 (the built-in baseline delay).
+  exposureWarmUpMilliseconds: 2000
+
+  # Meter exposure from the center of the frame, where the subject is.
+  centerMeteringEnabled: true
+
+  # Take a second photo when the first one comes out nearly black.
+  darkFrameRetryEnabled: true
+
+  # Mean luminance (0.0 black ... 1.0 white) below which a photo counts as
+  # a dark frame. 0 disables the brightness check.
+  darkFrameThreshold: 0.03
+
 logging:
   enableFileLogging: false
   directory: "~/Library/Logs/LoginShot"
@@ -191,6 +209,19 @@ watermark:
 
 When watermarking is enabled, LoginShot overlays `<hostname> <timestamp>` on saved images.
 If `watermark.format` is empty/invalid, LoginShot falls back to `yyyy-MM-dd HH:mm:ss zzz`.
+
+### Capture quality settings
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `capture.exposureWarmUpMilliseconds` | Integer | `2000` | Milliseconds to run the capture pipeline before taking the still photo. The effective delay is never below the 500 ms baseline used by earlier versions, so `0` means "baseline only". |
+| `capture.centerMeteringEnabled` | Boolean | `true` | Sets `exposurePointOfInterest` to the frame center (`0.5, 0.5`) and continuous auto-exposure when the camera supports it. Unsupported cameras fall back to default metering. |
+| `capture.darkFrameRetryEnabled` | Boolean | `true` | Takes one additional photo (after 1.5 s) when the first photo is nearly black, and keeps the brighter of the two. |
+| `capture.darkFrameThreshold` | Number (0.0–1.0) | `0.03` | Mean luminance below which a photo counts as a dark frame. Lower it if legitimately dim rooms trigger retries; set `0` to disable the brightness check. |
+
+Latency impact: the default warm-up adds about 2 s per capture. A dark-frame retry adds another 1.5 s for that capture only. Center metering adds negligible latency.
+
+These defaults apply automatically to existing configs: missing keys fall back to the values above, so no config edit is required after upgrading. To restore the old behaviour exactly, set `exposureWarmUpMilliseconds: 0`, `centerMeteringEnabled: false` and `darkFrameRetryEnabled: false`.
 
 ## Output files
 
@@ -217,9 +248,12 @@ If enabled, a sidecar metadata JSON is also written:
   "failure": null,
   "diagnostics": {
     "backend": "avfoundation",
-    "durationMs": 611,
+    "durationMs": 2110,
     "attemptCount": 1,
-    "failureCode": null
+    "failureCode": null,
+    "meanLuminance": 0.42,
+    "darkFrameDetected": false,
+    "exposureWarmUpMs": 2000
   },
   "app": {
     "bundleId": "dev.pruiz.LoginShot",
@@ -233,6 +267,8 @@ If enabled, a sidecar metadata JSON is also written:
   }
 }
 ```
+
+The `meanLuminance`, `darkFrameDetected` and `exposureWarmUpMs` diagnostic fields are optional: they are omitted when unknown, and sidecars written by earlier versions decode without them.
 
 ## Menu Bar
 
@@ -274,6 +310,11 @@ log show --last 10m --predicate 'subsystem == "dev.pruiz.LoginShot"'
 ## Troubleshooting
 - **No camera prompt / capture fails**
   - System Settings → Privacy & Security → Camera → enable LoginShot.
+- **Captures are black or very dark**
+  - Check `diagnostics.meanLuminance` in the sidecar JSON. A value near `0` means the camera itself delivered a dark frame.
+  - LoginShot already warms the pipeline for 2 s and meters from the center by default. If your camera needs longer, raise `capture.exposureWarmUpMilliseconds`.
+  - If `darkFrameDetected` is `true`, the retry also came out dark. Raise `capture.darkFrameThreshold` to retry more aggressively, or lower it if the retries are unnecessary for dim rooms.
+  - A covered lens, a closed privacy shutter, or `lock` captures firing while the session is being torn down can still produce dark frames.
 - **Unlock capture doesn’t trigger**
   - Unlock signals vary by macOS version. We may combine NSWorkspace + distributed notifications to make this robust.
 - **Lock capture behaves inconsistently**
