@@ -98,4 +98,81 @@ final class CaptureMetadataTests: XCTestCase {
         XCTAssertEqual(metadata.failure?.reason, "camera_capture_failed")
         XCTAssertEqual(metadata.failure?.message, "denied")
     }
+
+    // MARK: - Capture quality diagnostics
+
+    func testDiagnosticsEncodeCaptureQualityFieldsWhenProvided() throws {
+        let metadata = CaptureMetadata.build(
+            event: .unlock,
+            outputPath: "/tmp/dark.jpg",
+            cameraInfo: .unknown,
+            success: true,
+            diagnostics: CaptureMetadata.Diagnostics(
+                backend: "avfoundation",
+                durationMs: 2500,
+                attemptCount: 2,
+                failureCode: nil,
+                meanLuminance: 0.012,
+                darkFrameDetected: true,
+                exposureWarmUpMs: 2000
+            )
+        )
+
+        let data = try JSONEncoder().encode(metadata)
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+
+        XCTAssertTrue(json.contains("\"attemptCount\":2"))
+        XCTAssertTrue(json.contains("\"meanLuminance\":0.012"))
+        XCTAssertTrue(json.contains("\"darkFrameDetected\":true"))
+        XCTAssertTrue(json.contains("\"exposureWarmUpMs\":2000"))
+    }
+
+    func testDiagnosticsOmitCaptureQualityFieldsWhenUnknown() throws {
+        let metadata = CaptureMetadata.build(
+            event: .unlock,
+            outputPath: "/tmp/plain.jpg",
+            cameraInfo: .unknown,
+            success: true,
+            diagnostics: CaptureMetadata.Diagnostics(
+                backend: "avfoundation",
+                durationMs: 600,
+                attemptCount: 1,
+                failureCode: nil
+            )
+        )
+
+        let data = try JSONEncoder().encode(metadata)
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+
+        XCTAssertFalse(json.contains("meanLuminance"))
+        XCTAssertFalse(json.contains("darkFrameDetected"))
+        XCTAssertFalse(json.contains("exposureWarmUpMs"))
+    }
+
+    func testDecodesSidecarWithoutCaptureQualityFields() throws {
+        let json = """
+        {
+          "timestamp": "2026-08-30T10:00:00.000Z",
+          "event": "unlock",
+          "hostname": "host",
+          "username": "user",
+          "outputPath": "/tmp/legacy.jpg",
+          "status": "success",
+          "diagnostics": {
+            "backend": "avfoundation",
+            "durationMs": 500,
+            "attemptCount": 1
+          },
+          "app": { "bundleId": "dev.pruiz.LoginShot", "version": "1.0", "build": "1" },
+          "camera": { "deviceName": "Camera", "position": "front", "uniqueID": null }
+        }
+        """
+
+        let metadata = try JSONDecoder().decode(CaptureMetadata.self, from: Data(json.utf8))
+
+        XCTAssertEqual(metadata.diagnostics?.attemptCount, 1)
+        XCTAssertNil(metadata.diagnostics?.meanLuminance)
+        XCTAssertNil(metadata.diagnostics?.darkFrameDetected)
+        XCTAssertNil(metadata.diagnostics?.exposureWarmUpMs)
+    }
 }

@@ -141,6 +141,10 @@ final class AppDelegateTests: XCTestCase {
         config.output.maxWidth = 800
         config.output.jpegQuality = 0.7
         config.capture.cameraUniqueID = "camera-2"
+        config.capture.exposureWarmUpMilliseconds = 2500
+        config.capture.centerMeteringEnabled = false
+        config.capture.darkFrameRetryEnabled = false
+        config.capture.darkFrameThreshold = 0.08
         config.watermark.enabled = true
         config.watermark.format = "yyyy/MM/dd HH:mm"
 
@@ -157,6 +161,38 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(mockCaptureService.lastWatermarkEnabled, true)
         XCTAssertEqual(mockCaptureService.lastWatermarkFormat, "yyyy/MM/dd HH:mm")
         XCTAssertNotNil(mockCaptureService.lastHostname)
+
+        let quality = try XCTUnwrap(mockCaptureService.lastCaptureQuality)
+        XCTAssertEqual(quality.exposureWarmUpMilliseconds, 2500)
+        XCTAssertFalse(quality.centerMeteringEnabled)
+        XCTAssertFalse(quality.darkFrameRetryEnabled)
+        XCTAssertEqual(quality.darkFrameThreshold, 0.08, accuracy: 0.0001)
+    }
+
+    func testHandleCaptureEventRecordsDarkFrameDiagnostics() async throws {
+        mockCaptureService.captureResult = .success(
+            CaptureResult(
+                jpegData: Data([0xFF, 0xD8, 0xFF, 0xE0]),
+                cameraInfo: .unknown,
+                attemptCount: 2,
+                meanLuminance: 0.012,
+                darkFrameDetected: true,
+                exposureWarmUpMs: 2000
+            )
+        )
+
+        let delegate = makeAppDelegate()
+        delegate.reloadConfig()
+
+        delegate.handleCaptureEvent(.sessionOpen)
+
+        try await Task.sleep(for: .milliseconds(100))
+
+        let diagnostics = try XCTUnwrap(mockStorageWriter.lastMetadata?.diagnostics)
+        XCTAssertEqual(diagnostics.attemptCount, 2)
+        XCTAssertEqual(diagnostics.meanLuminance ?? -1, 0.012, accuracy: 0.0001)
+        XCTAssertEqual(diagnostics.darkFrameDetected, true)
+        XCTAssertEqual(diagnostics.exposureWarmUpMs, 2000)
     }
 
     func testHandleCaptureEventCallsStorageWriter() async throws {

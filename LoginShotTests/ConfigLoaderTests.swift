@@ -24,6 +24,10 @@ final class ConfigLoaderTests: XCTestCase {
           silent: false
           debounceSeconds: 5
           cameraUniqueID: "camera-abc"
+          exposureWarmUpMilliseconds: 1250
+          centerMeteringEnabled: false
+          darkFrameRetryEnabled: false
+          darkFrameThreshold: 0.05
         logging:
           enableFileLogging: true
           directory: "~/Library/Logs/LoginShot"
@@ -50,6 +54,10 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertFalse(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 5)
         XCTAssertEqual(config.capture.cameraUniqueID, "camera-abc")
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 1250)
+        XCTAssertFalse(config.capture.centerMeteringEnabled)
+        XCTAssertFalse(config.capture.darkFrameRetryEnabled)
+        XCTAssertEqual(config.capture.darkFrameThreshold, 0.05, accuracy: 0.0001)
         XCTAssertTrue(config.logging.enableFileLogging)
         XCTAssertEqual(config.logging.retentionDays, 7)
         XCTAssertEqual(config.logging.cleanupIntervalHours, 12)
@@ -82,6 +90,10 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 2000)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
+        XCTAssertTrue(config.capture.darkFrameRetryEnabled)
+        XCTAssertEqual(config.capture.darkFrameThreshold, 0.03, accuracy: 0.0001)
         XCTAssertFalse(config.logging.enableFileLogging)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
@@ -215,5 +227,68 @@ final class ConfigLoaderTests: XCTestCase {
 
         XCTAssertFalse(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, "yyyy/MM/dd HH:mm")
+    }
+
+    // MARK: - Capture quality settings
+
+    func testParsesExposureWarmUpAsFloatTruncates() throws {
+        let yaml = """
+        capture:
+          exposureWarmUpMilliseconds: 1250.6
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 1250)
+    }
+
+    func testParsesDarkFrameThresholdAsInteger() throws {
+        let yaml = """
+        capture:
+          darkFrameThreshold: 1
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(config.capture.darkFrameThreshold, 1.0, accuracy: 0.0001)
+    }
+
+    func testParsesCaptureBooleansFromStrings() throws {
+        let yaml = """
+        capture:
+          centerMeteringEnabled: "false"
+          darkFrameRetryEnabled: "no"
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertFalse(config.capture.centerMeteringEnabled)
+        XCTAssertFalse(config.capture.darkFrameRetryEnabled)
+    }
+
+    func testInvalidCaptureBooleanFallsBackToDefault() throws {
+        let yaml = """
+        capture:
+          centerMeteringEnabled: "sometimes"
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
+    }
+
+    func testMissingCaptureQualitySettingsUseDefaults() throws {
+        let yaml = """
+        capture:
+          debounceSeconds: 4
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+        let defaults = AppConfig.CaptureConfig.default
+
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, defaults.exposureWarmUpMilliseconds)
+        XCTAssertEqual(config.capture.centerMeteringEnabled, defaults.centerMeteringEnabled)
+        XCTAssertEqual(config.capture.darkFrameRetryEnabled, defaults.darkFrameRetryEnabled)
+        XCTAssertEqual(config.capture.darkFrameThreshold, defaults.darkFrameThreshold, accuracy: 0.0001)
     }
 }

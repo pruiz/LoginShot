@@ -115,10 +115,27 @@ enum ConfigLoader {
             menuBarIcon: uiDict["menuBarIcon"] as? Bool ?? true
         )
 
+        let captureDefaults = AppConfig.CaptureConfig.default
         let capture = AppConfig.CaptureConfig(
             silent: captureDict["silent"] as? Bool ?? true,
             debounceSeconds: extractInt(captureDict["debounceSeconds"], default: 3),
-            cameraUniqueID: captureDict["cameraUniqueID"] as? String
+            cameraUniqueID: captureDict["cameraUniqueID"] as? String,
+            exposureWarmUpMilliseconds: extractInt(
+                captureDict["exposureWarmUpMilliseconds"],
+                default: captureDefaults.exposureWarmUpMilliseconds
+            ),
+            centerMeteringEnabled: extractBool(
+                captureDict["centerMeteringEnabled"],
+                default: captureDefaults.centerMeteringEnabled
+            ),
+            darkFrameRetryEnabled: extractBool(
+                captureDict["darkFrameRetryEnabled"],
+                default: captureDefaults.darkFrameRetryEnabled
+            ),
+            darkFrameThreshold: extractDouble(
+                captureDict["darkFrameThreshold"],
+                default: captureDefaults.darkFrameThreshold
+            )
         )
 
         let logging = AppConfig.LoggingConfig(
@@ -198,5 +215,24 @@ enum ConfigLoader {
             return Int(doubleValue)
         }
         return defaultValue
+    }
+
+    /// Extract a Bool from YAML value, accepting common string spellings
+    /// (`"true"` / `"false"`) in addition to real booleans.
+    private static func extractBool(_ value: Any?, default defaultValue: Bool) -> Bool {
+        if let boolValue = value as? Bool {
+            return boolValue
+        }
+        guard let stringValue = value as? String else {
+            return defaultValue
+        }
+        switch stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "true", "yes", "1":
+            return true
+        case "false", "no", "0":
+            return false
+        default:
+            return defaultValue
+        }
     }
 }

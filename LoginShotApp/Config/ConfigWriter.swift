@@ -104,6 +104,21 @@ enum ConfigWriter {
           # Camera unique identifier. null = automatic/default camera.
           cameraUniqueID: null
 
+          # Milliseconds to run the capture pipeline before taking the still
+          # photo, so auto-exposure and auto-white-balance can settle.
+          # Values below 500 are treated as 500 (the built-in baseline delay).
+          exposureWarmUpMilliseconds: 2000
+
+          # Meter exposure from the center of the frame, where the subject is.
+          centerMeteringEnabled: true
+
+          # Take a second photo when the first one comes out nearly black.
+          darkFrameRetryEnabled: true
+
+          # Mean luminance (0.0 black ... 1.0 white) below which a photo
+          # counts as a dark frame. 0 disables the brightness check.
+          darkFrameThreshold: 0.03
+
         logging:
           # Write app logs to files in addition to macOS unified logging.
           # Default false keeps logging fully OS-managed.
@@ -160,6 +175,10 @@ enum ConfigWriter {
           silent: \(config.capture.silent)
           debounceSeconds: \(config.capture.debounceSeconds)
           cameraUniqueID: \(cameraUniqueID)
+          exposureWarmUpMilliseconds: \(config.capture.exposureWarmUpMilliseconds)
+          centerMeteringEnabled: \(config.capture.centerMeteringEnabled)
+          darkFrameRetryEnabled: \(config.capture.darkFrameRetryEnabled)
+          darkFrameThreshold: \(String(format: "%.3f", config.capture.darkFrameThreshold))
 
         logging:
           enableFileLogging: \(config.logging.enableFileLogging)

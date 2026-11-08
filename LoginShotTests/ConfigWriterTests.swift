@@ -77,6 +77,24 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertEqual(parsed.capture.cameraUniqueID, "camera-xyz")
     }
 
+    func testWriteConfigPersistsCaptureQualitySettings() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = 3000
+        config.capture.centerMeteringEnabled = false
+        config.capture.darkFrameRetryEnabled = false
+        config.capture.darkFrameThreshold = 0.12
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.capture.exposureWarmUpMilliseconds, 3000)
+        XCTAssertFalse(parsed.capture.centerMeteringEnabled)
+        XCTAssertFalse(parsed.capture.darkFrameRetryEnabled)
+        XCTAssertEqual(parsed.capture.darkFrameThreshold, 0.12, accuracy: 0.0001)
+    }
+
     func testWriteConfigEscapesQuotedPaths() throws {
         let path = (tempDir as NSString).appendingPathComponent("config.yml")
         var config = AppConfig.default
@@ -111,6 +129,10 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(yaml.contains("jpegQuality: 0.85"), "Missing default jpegQuality")
         XCTAssertTrue(yaml.contains("debounceSeconds: 3"), "Missing default debounceSeconds")
         XCTAssertTrue(yaml.contains("cameraUniqueID: null"), "Missing default cameraUniqueID")
+        XCTAssertTrue(yaml.contains("exposureWarmUpMilliseconds: 2000"), "Missing default exposureWarmUpMilliseconds")
+        XCTAssertTrue(yaml.contains("centerMeteringEnabled: true"), "Missing default centerMeteringEnabled")
+        XCTAssertTrue(yaml.contains("darkFrameRetryEnabled: true"), "Missing default darkFrameRetryEnabled")
+        XCTAssertTrue(yaml.contains("darkFrameThreshold: 0.03"), "Missing default darkFrameThreshold")
         XCTAssertTrue(yaml.contains("onLock: true"), "Missing default onLock")
         XCTAssertTrue(yaml.contains("enableFileLogging: false"), "Missing default file logging toggle")
         XCTAssertTrue(yaml.contains("enabled: true"), "Missing default watermark enabled")
@@ -133,6 +155,10 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 2000)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
+        XCTAssertTrue(config.capture.darkFrameRetryEnabled)
+        XCTAssertEqual(config.capture.darkFrameThreshold, 0.03, accuracy: 0.0001)
         XCTAssertFalse(config.logging.enableFileLogging)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
