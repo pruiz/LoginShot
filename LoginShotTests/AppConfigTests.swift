@@ -20,6 +20,10 @@ final class AppConfigTests: XCTestCase {
         XCTAssertTrue(config.capture.silent)
         XCTAssertEqual(config.capture.debounceSeconds, 3)
         XCTAssertNil(config.capture.cameraUniqueID)
+        XCTAssertEqual(config.capture.exposureWarmUpMilliseconds, 2000)
+        XCTAssertTrue(config.capture.centerMeteringEnabled)
+        XCTAssertTrue(config.capture.darkFrameRetryEnabled)
+        XCTAssertEqual(config.capture.darkFrameThreshold, 0.03, accuracy: 0.0001)
         XCTAssertTrue(config.watermark.enabled)
         XCTAssertEqual(config.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
     }
@@ -127,5 +131,121 @@ final class AppConfigTests: XCTestCase {
         let validated = config.validated()
 
         XCTAssertEqual(validated.watermark.format, AppConfig.WatermarkConfig.defaultFormat)
+    }
+
+    // MARK: - Validation: exposure warm-up
+
+    func testValidationFixesNegativeExposureWarmUp() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = -250
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.exposureWarmUpMilliseconds, 0)
+    }
+
+    func testValidationKeepsZeroExposureWarmUp() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = 0
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.exposureWarmUpMilliseconds, 0)
+    }
+
+    func testValidationKeepsPositiveExposureWarmUp() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = 1500
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.exposureWarmUpMilliseconds, 1500)
+    }
+
+    func testValidationClampsExposureWarmUpAboveMaximum() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = 20_000
+
+        let validated = config.validated()
+
+        XCTAssertEqual(
+            validated.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+        )
+    }
+
+    func testValidationKeepsExposureWarmUpAtMaximum() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+
+        let validated = config.validated()
+
+        XCTAssertEqual(
+            validated.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+        )
+    }
+
+    // MARK: - Validation: non-finite numbers
+
+    func testValidationReplacesNonFiniteJpegQuality() {
+        for invalid in [Double.nan, Double.infinity, -Double.infinity] {
+            var config = AppConfig.default
+            config.output.jpegQuality = invalid
+
+            let validated = config.validated()
+
+            XCTAssertEqual(
+                validated.output.jpegQuality,
+                AppConfig.OutputConfig.default.jpegQuality,
+                accuracy: 0.0001,
+                "Quality \(invalid) should fall back to the default"
+            )
+        }
+    }
+
+    func testValidationReplacesNonFiniteDarkFrameThreshold() {
+        for invalid in [Double.nan, Double.infinity, -Double.infinity] {
+            var config = AppConfig.default
+            config.capture.darkFrameThreshold = invalid
+
+            let validated = config.validated()
+
+            XCTAssertEqual(
+                validated.capture.darkFrameThreshold,
+                AppConfig.CaptureConfig.default.darkFrameThreshold,
+                accuracy: 0.0001,
+                "Threshold \(invalid) should fall back to the default"
+            )
+        }
+    }
+
+    // MARK: - Validation: dark frame threshold
+
+    func testValidationClampsDarkFrameThresholdAboveOne() {
+        var config = AppConfig.default
+        config.capture.darkFrameThreshold = 1.7
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.darkFrameThreshold, 1.0, accuracy: 0.0001)
+    }
+
+    func testValidationClampsNegativeDarkFrameThreshold() {
+        var config = AppConfig.default
+        config.capture.darkFrameThreshold = -0.2
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.darkFrameThreshold, 0.0, accuracy: 0.0001)
+    }
+
+    func testValidationKeepsValidDarkFrameThreshold() {
+        var config = AppConfig.default
+        config.capture.darkFrameThreshold = 0.15
+
+        let validated = config.validated()
+
+        XCTAssertEqual(validated.capture.darkFrameThreshold, 0.15, accuracy: 0.0001)
     }
 }

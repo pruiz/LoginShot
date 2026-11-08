@@ -274,7 +274,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     cameraUniqueID: config.capture.cameraUniqueID,
                     watermarkEnabled: config.watermark.enabled,
                     watermarkFormat: config.watermark.format,
-                    hostname: ProcessInfo.processInfo.hostName
+                    hostname: ProcessInfo.processInfo.hostName,
+                    captureQuality: Self.captureQuality(from: config)
                 )
 
                 // 2. Build metadata
@@ -286,8 +287,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     diagnostics: CaptureMetadata.Diagnostics(
                         backend: "avfoundation",
                         durationMs: Int(Date().timeIntervalSince(startedAt) * 1000),
-                        attemptCount: 1,
-                        failureCode: nil
+                        attemptCount: result.attemptCount,
+                        failureCode: nil,
+                        meanLuminance: result.meanLuminance,
+                        darkFrameDetected: result.darkFrameDetected,
+                        exposureWarmUpMs: result.exposureWarmUpMs
                     )
                 )
 
@@ -527,7 +531,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     cameraUniqueID: selectedID,
                     watermarkEnabled: config.watermark.enabled,
                     watermarkFormat: config.watermark.format,
-                    hostname: ProcessInfo.processInfo.hostName
+                    hostname: ProcessInfo.processInfo.hostName,
+                    captureQuality: Self.captureQuality(from: config)
                 )
                 alertPresenter.showInfo(title: "LoginShot", message: "Camera verification succeeded.")
             } catch {
@@ -574,6 +579,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Filename Generation
+
+    /// Map capture-related config values to the capture pipeline settings.
+    static func captureQuality(from config: AppConfig) -> CaptureQuality {
+        CaptureQuality(
+            exposureWarmUpMilliseconds: config.capture.exposureWarmUpMilliseconds,
+            centerMeteringEnabled: config.capture.centerMeteringEnabled,
+            darkFrameRetryEnabled: config.capture.darkFrameRetryEnabled,
+            darkFrameThreshold: config.capture.darkFrameThreshold
+        )
+    }
 
     /// Generate a timestamped filename: YYYY-MM-DDTHH-mm-ss-<event>.<ext>
     /// - Parameters:

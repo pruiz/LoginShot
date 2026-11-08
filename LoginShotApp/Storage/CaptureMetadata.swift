@@ -30,6 +30,30 @@ struct CaptureMetadata: Codable, Sendable {
         let durationMs: Int
         let attemptCount: Int
         let failureCode: String?
+        /// Mean luminance of the saved image (0.0 black ... 1.0 white).
+        let meanLuminance: Double?
+        /// True when the saved image was still considered a dark frame.
+        let darkFrameDetected: Bool?
+        /// Stabilization delay applied before the first photo, in milliseconds.
+        let exposureWarmUpMs: Int?
+
+        init(
+            backend: String,
+            durationMs: Int,
+            attemptCount: Int,
+            failureCode: String?,
+            meanLuminance: Double? = nil,
+            darkFrameDetected: Bool? = nil,
+            exposureWarmUpMs: Int? = nil
+        ) {
+            self.backend = backend
+            self.durationMs = durationMs
+            self.attemptCount = attemptCount
+            self.failureCode = failureCode
+            self.meanLuminance = meanLuminance
+            self.darkFrameDetected = darkFrameDetected
+            self.exposureWarmUpMs = exposureWarmUpMs
+        }
     }
 
     /// Build metadata for a capture event using current system state.

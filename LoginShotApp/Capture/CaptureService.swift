@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreMedia
 import CoreText
 import Foundation
 import ImageIO
@@ -37,6 +38,43 @@ enum WatermarkFormatter {
 struct CaptureResult: Sendable {
     let jpegData: Data
     let cameraInfo: CameraInfo
+    /// Number of photos taken for this capture (2 when a dark frame was retried).
+    let attemptCount: Int
+    /// Mean luminance of the saved image (0.0 black ... 1.0 white), when measurable.
+    let meanLuminance: Double?
+    /// Whether the saved image was still considered a dark frame.
+    let darkFrameDetected: Bool
+    /// Stabilization delay applied before the first photo, in milliseconds.
+    let exposureWarmUpMs: Int
+
+    init(
+        jpegData: Data,
+        cameraInfo: CameraInfo,
+        attemptCount: Int = 1,
+        meanLuminance: Double? = nil,
+        darkFrameDetected: Bool = false,
+        exposureWarmUpMs: Int = 0
+    ) {
+        self.jpegData = jpegData
+        self.cameraInfo = cameraInfo
+        self.attemptCount = attemptCount
+        self.meanLuminance = meanLuminance
+        self.darkFrameDetected = darkFrameDetected
+        self.exposureWarmUpMs = exposureWarmUpMs
+    }
+}
+
+/// Camera quality settings applied to a single capture.
+struct CaptureQuality: Sendable, Equatable {
+    /// Requested warm-up before the still capture, in milliseconds.
+    /// Values below the built-in baseline delay are applied as the baseline.
+    var exposureWarmUpMilliseconds: Int
+    /// Meter exposure from the center of the frame when the camera supports it.
+    var centerMeteringEnabled: Bool
+    /// Take a second photo when the first one is nearly black.
+    var darkFrameRetryEnabled: Bool
+    /// Mean luminance below which a photo counts as a dark frame.
+    var darkFrameThreshold: Double
 }
 
 /// Errors from the capture pipeline.
@@ -54,7 +92,8 @@ protocol CaptureServiceProtocol: Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        captureQuality: CaptureQuality
     ) async throws -> CaptureResult
     func listCameras() -> [CameraDeviceDescriptor]
 }
@@ -68,7 +107,8 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        captureQuality: CaptureQuality
     ) async throws -> CaptureResult {
         try await OneShotCapture.perform(
             maxWidth: maxWidth,
@@ -76,7 +116,8 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
             cameraUniqueID: cameraUniqueID,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            captureQuality: captureQuality
         )
     }
 
@@ -102,24 +143,33 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
 /// Manages a single AVCaptureSession lifecycle: setup → capture → teardown.
 /// Uses @unchecked Sendable because all AVFoundation state is accessed
 /// sequentially (never concurrently) through the async run() method.
-private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @unchecked Sendable {
+private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
 
     private let maxWidth: Int
     private let quality: Double
-    private var continuation: CheckedContinuation<CaptureResult, Error>?
+    private var continuation: CheckedContinuation<CapturedFrame, Error>?
     private var deviceName: String = "Unknown"
     private var devicePosition: String = "unknown"
     private var selectedCameraUniqueID: String?
     private let watermarkEnabled: Bool
     private let watermarkFormat: String
     private let hostname: String
+    private let captureQuality: CaptureQuality
 
-    private init(maxWidth: Int, quality: Double, watermarkEnabled: Bool, watermarkFormat: String, hostname: String) {
+    private init(
+        maxWidth: Int,
+        quality: Double,
+        watermarkEnabled: Bool,
+        watermarkFormat: String,
+        hostname: String,
+        captureQuality: CaptureQuality
+    ) {
         self.maxWidth = maxWidth
         self.quality = quality
         self.watermarkEnabled = watermarkEnabled
         self.watermarkFormat = watermarkFormat
         self.hostname = hostname
+        self.captureQuality = captureQuality
         super.init()
     }
 
@@ -130,7 +180,8 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         cameraUniqueID: String?,
         watermarkEnabled: Bool,
         watermarkFormat: String,
-        hostname: String
+        hostname: String,
+        captureQuality: CaptureQuality
     ) async throws -> CaptureResult {
         // 1. Check / request camera authorization
         try await ensureCameraAuthorization()
@@ -141,7 +192,8 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             quality: quality,
             watermarkEnabled: watermarkEnabled,
             watermarkFormat: watermarkFormat,
-            hostname: hostname
+            hostname: hostname,
+            captureQuality: captureQuality
         )
         return try await capture.run(cameraUniqueID: cameraUniqueID)
     }
@@ -195,27 +247,54 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         }
         session.addInput(input)
 
+        if captureQuality.centerMeteringEnabled {
+            Self.configureCenterExposure(device: device)
+        }
+
         let output = AVCapturePhotoOutput()
         guard session.canAddOutput(output) else {
             throw CaptureError.captureFailed("Cannot add photo output to capture session")
         }
         session.addOutput(output)
 
-        // Start session and allow camera sensor to stabilize (exposure, white balance)
+        // Optional priming output goes in after the required photo output, so a
+        // camera that cannot run both does not block the capture.
+        if CaptureSequence.shouldPrimePipeline(for: captureQuality) {
+            let videoOutput = AVCaptureVideoDataOutput()
+            videoOutput.alwaysDiscardsLateVideoFrames = true
+            videoOutput.setSampleBufferDelegate(
+                self,
+                queue: DispatchQueue(label: "dev.pruiz.LoginShot.video-priming")
+            )
+            if session.canAddOutput(videoOutput) {
+                session.addOutput(videoOutput)
+            } else {
+                Log.capture.warning("Cannot add video output; continuing without pipeline priming")
+            }
+        }
+
+        // Start session, then run the shared warm-up / capture / retry sequence.
         session.startRunning()
 
-        try await Task.sleep(for: .milliseconds(500))
+        let sequence = CaptureSequence(
+            quality: captureQuality,
+            isSessionRunning: { session.isRunning && output.connection(with: .video)?.isActive == true },
+            capturePhoto: { try await self.capturePhoto(with: output) }
+        )
+        let outcome = try await sequence.run()
 
-        guard session.isRunning else {
-            throw CaptureError.captureFailed("Capture session failed to start")
-        }
-
-        // Capture photo via delegate callback → continuation
-        let result: CaptureResult = try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            let settings = AVCapturePhotoSettings()
-            output.capturePhoto(with: settings, delegate: self)
-        }
+        let result = CaptureResult(
+            jpegData: outcome.frame.jpegData,
+            cameraInfo: CameraInfo(
+                deviceName: deviceName,
+                position: devicePosition,
+                uniqueID: selectedCameraUniqueID
+            ),
+            attemptCount: outcome.attemptCount,
+            meanLuminance: outcome.frame.meanLuminance,
+            darkFrameDetected: outcome.darkFrameDetected,
+            exposureWarmUpMs: outcome.stabilizationMs
+        )
 
         // Tear down: remove inputs/outputs before stopping to avoid
         // "NSKVONotifying_AVCapturePhotoOutput not linked" runtime warning.
@@ -226,9 +305,19 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
         for sessionOutput in session.outputs {
             session.removeOutput(sessionOutput)
         }
-        Log.capture.info("Capture complete (\(result.jpegData.count) bytes)")
+        Log.capture.info(
+            "Capture complete (\(result.jpegData.count) bytes, attempt(s): \(result.attemptCount))"
+        )
 
         return result
+    }
+
+    private func capturePhoto(with output: AVCapturePhotoOutput) async throws -> CapturedFrame {
+        try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            let settings = AVCapturePhotoSettings()
+            output.capturePhoto(with: settings, delegate: self)
+        }
     }
 
     // MARK: - AVCapturePhotoCaptureDelegate
@@ -257,17 +346,26 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
 
         // Resize and re-encode as JPEG
         do {
-            let jpegData = try processImage(data: imageData)
-            let cameraInfo = CameraInfo(deviceName: deviceName, position: devicePosition, uniqueID: selectedCameraUniqueID)
-            continuation.resume(returning: CaptureResult(jpegData: jpegData, cameraInfo: cameraInfo))
+            continuation.resume(returning: try processImage(data: imageData))
         } catch {
             continuation.resume(throwing: error)
         }
     }
 
+    // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
+
+    nonisolated func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        // No-op: the video output only exists to keep frames flowing so the
+        // camera's auto-exposure and auto-white-balance algorithms converge.
+    }
+
     // MARK: - Image Processing
 
-    private func processImage(data: Data) throws -> Data {
+    private func processImage(data: Data) throws -> CapturedFrame {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw CaptureError.captureFailed("Failed to decode captured image data")
@@ -309,6 +407,9 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             finalImage = cgImage
         }
 
+        // Measure brightness before the watermark is drawn on top.
+        let meanLuminance = ImageLuminance.mean(of: finalImage)
+
         let imageForEncoding: CGImage
         if watermarkEnabled {
             imageForEncoding = try applyWatermark(to: finalImage)
@@ -336,7 +437,32 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, @un
             throw CaptureError.captureFailed("Failed to finalize JPEG encoding")
         }
 
-        return mutableData as Data
+        return CapturedFrame(jpegData: mutableData as Data, meanLuminance: meanLuminance)
+    }
+
+    // MARK: - Exposure Metering
+
+    /// Configure center-weighted exposure metering.
+    /// Sets exposurePointOfInterest to the frame center (0.5, 0.5) and
+    /// exposureMode to continuousAutoExposure if supported by the device.
+    private static func configureCenterExposure(device: AVCaptureDevice) {
+        do {
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+
+            guard device.isExposurePointOfInterestSupported else {
+                Log.capture.info("Camera does not support exposurePointOfInterest; using default metering")
+                return
+            }
+
+            device.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+            if device.isExposureModeSupported(.continuousAutoExposure) {
+                device.exposureMode = .continuousAutoExposure
+            }
+            Log.capture.debug("Configured center-weighted exposure metering")
+        } catch {
+            Log.capture.warning("Failed to configure center exposure metering: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Helpers
