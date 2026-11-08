@@ -47,13 +47,15 @@ struct DarkFramePolicy: Sendable, Equatable {
     let enabled: Bool
     let threshold: Double
 
+    /// Brightness check only. Independent of whether retries are enabled, so
+    /// the sidecar can still report that a saved photo was dark.
     func isDark(meanLuminance: Double?) -> Bool {
-        guard enabled, let meanLuminance else { return false }
+        guard let meanLuminance else { return false }
         return meanLuminance < threshold
     }
 
     /// - Parameter attempt: 1-based number of the attempt that just completed.
     func shouldRetry(afterAttempt attempt: Int, meanLuminance: Double?) -> Bool {
-        attempt < Self.maxAttempts && isDark(meanLuminance: meanLuminance)
+        enabled && attempt < Self.maxAttempts && isDark(meanLuminance: meanLuminance)
     }
 }

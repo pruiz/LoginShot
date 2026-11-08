@@ -95,6 +95,45 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertEqual(parsed.capture.darkFrameThreshold, 0.12, accuracy: 0.0001)
     }
 
+    func testWriteConfigPreservesSmallDarkFrameThreshold() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.capture.darkFrameThreshold = 0.0004
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        XCTAssertTrue(content.contains("darkFrameThreshold: 0.0004"), "Threshold was rounded when saved")
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.capture.darkFrameThreshold, 0.0004, accuracy: 1e-12)
+    }
+
+    func testWriteConfigPreservesFractionalJpegQuality() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.output.jpegQuality = 0.855
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        XCTAssertTrue(content.contains("jpegQuality: 0.855"), "JPEG quality was rounded when saved")
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.output.jpegQuality, 0.855, accuracy: 1e-9)
+    }
+
+    func testWriteConfigWritesWholeNumbersWithDecimalPoint() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.output.jpegQuality = 1.0
+        config.capture.darkFrameThreshold = 0.0
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        XCTAssertTrue(content.contains("jpegQuality: 1.0"))
+        XCTAssertTrue(content.contains("darkFrameThreshold: 0.0"))
+    }
+
     func testWriteConfigEscapesQuotedPaths() throws {
         let path = (tempDir as NSString).appendingPathComponent("config.yml")
         var config = AppConfig.default

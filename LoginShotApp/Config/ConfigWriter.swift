@@ -158,7 +158,7 @@ enum ConfigWriter {
           directory: \(outputDirectory)
           format: \(outputFormat)
           maxWidth: \(config.output.maxWidth)
-          jpegQuality: \(String(format: "%.2f", config.output.jpegQuality))
+          jpegQuality: \(yamlNumber(config.output.jpegQuality))
 
         triggers:
           onSessionOpen: \(config.triggers.onSessionOpen)
@@ -178,7 +178,7 @@ enum ConfigWriter {
           exposureWarmUpMilliseconds: \(config.capture.exposureWarmUpMilliseconds)
           centerMeteringEnabled: \(config.capture.centerMeteringEnabled)
           darkFrameRetryEnabled: \(config.capture.darkFrameRetryEnabled)
-          darkFrameThreshold: \(String(format: "%.3f", config.capture.darkFrameThreshold))
+          darkFrameThreshold: \(yamlNumber(config.capture.darkFrameThreshold))
 
         logging:
           enableFileLogging: \(config.logging.enableFileLogging)
@@ -196,6 +196,19 @@ enum ConfigWriter {
     private static func yamlScalarOrNull(_ value: String?) -> String {
         guard let value else { return "null" }
         return yamlQuoted(value)
+    }
+
+    /// Format a Double for YAML without rounding away small values and without
+    /// locale-specific separators or exponent notation.
+    private static func yamlNumber(_ value: Double) -> String {
+        var text = String(format: "%.15f", value)
+        while text.hasSuffix("0") && text.contains(".") {
+            text.removeLast()
+        }
+        if text.hasSuffix(".") {
+            text += "0"
+        }
+        return text
     }
 
     private static func yamlQuoted(_ value: String) -> String {

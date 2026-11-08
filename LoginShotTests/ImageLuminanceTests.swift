@@ -42,10 +42,10 @@ final class ImageLuminanceTests: XCTestCase {
         XCTAssertFalse(policy.shouldRetry(afterAttempt: 1, meanLuminance: 0.4))
     }
 
-    func testDisabledPolicyNeverRetries() {
+    func testDisabledRetryStillReportsDarkFrame() {
         let policy = DarkFramePolicy(enabled: false, threshold: 0.9)
 
-        XCTAssertFalse(policy.isDark(meanLuminance: 0.0))
+        XCTAssertTrue(policy.isDark(meanLuminance: 0.0))
         XCTAssertFalse(policy.shouldRetry(afterAttempt: 1, meanLuminance: 0.0))
     }
 

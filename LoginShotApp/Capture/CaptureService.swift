@@ -145,21 +145,9 @@ final class CaptureService: CaptureServiceProtocol, Sendable {
 /// sequentially (never concurrently) through the async run() method.
 private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
 
-    /// Delay that lets the camera settle when no warm-up is configured.
-    private static let baselineStabilizationMilliseconds = 500
-    /// Extra settle time before the second photo of a dark-frame retry.
-    private static let darkFrameRetryDelayMilliseconds = 1500
-
-    /// A photo after resizing and encoding, with its measured brightness.
-    private struct ProcessedPhoto {
-        let jpegData: Data
-        let meanLuminance: Double?
-    }
-
     private let maxWidth: Int
     private let quality: Double
-    private var continuation: CheckedContinuation<ProcessedPhoto, Error>?
-    private var currentAttempt = 1
+    private var continuation: CheckedContinuation<CapturedFrame, Error>?
     private var deviceName: String = "Unknown"
     private var devicePosition: String = "unknown"
     private var selectedCameraUniqueID: String?
@@ -263,7 +251,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
             Self.configureCenterExposure(device: device)
         }
 
-        if Self.shouldPrimePipeline(for: captureQuality) {
+        if CaptureSequence.shouldPrimePipeline(for: captureQuality) {
             let videoOutput = AVCaptureVideoDataOutput()
             videoOutput.alwaysDiscardsLateVideoFrames = true
             videoOutput.setSampleBufferDelegate(
@@ -283,62 +271,27 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         }
         session.addOutput(output)
 
-        // Start session and allow camera sensor to stabilize (exposure, white balance)
-        let stabilizationMs = Self.stabilizationMilliseconds(for: captureQuality)
+        // Start session, then run the shared warm-up / capture / retry sequence.
         session.startRunning()
 
-        if captureQuality.exposureWarmUpMilliseconds > Self.baselineStabilizationMilliseconds {
-            Log.capture.info("Warming up exposure for \(stabilizationMs)ms before still capture")
-        } else {
-            Log.capture.debug("Applying baseline camera stabilization for \(stabilizationMs)ms before still capture")
-        }
-        try await Task.sleep(for: .milliseconds(stabilizationMs))
-
-        guard session.isRunning else {
-            throw CaptureError.captureFailed("Capture session failed to start")
-        }
-
-        let policy = DarkFramePolicy(
-            enabled: captureQuality.darkFrameRetryEnabled,
-            threshold: captureQuality.darkFrameThreshold
+        let sequence = CaptureSequence(
+            quality: captureQuality,
+            isSessionRunning: { session.isRunning },
+            capturePhoto: { try await self.capturePhoto(with: output) }
         )
-
-        currentAttempt = 1
-        var photo = try await capturePhoto(with: output)
-        Log.capture.info("Capture attempt 1: mean luminance \(Self.describe(photo.meanLuminance))")
-
-        if policy.shouldRetry(afterAttempt: currentAttempt, meanLuminance: photo.meanLuminance) {
-            Log.capture.warning(
-                "Dark frame detected (mean luminance \(Self.describe(photo.meanLuminance))); "
-                    + "retrying in \(Self.darkFrameRetryDelayMilliseconds)ms"
-            )
-            try await Task.sleep(for: .milliseconds(Self.darkFrameRetryDelayMilliseconds))
-            currentAttempt += 1
-            let retry = try await capturePhoto(with: output)
-            Log.capture.info("Capture attempt 2: mean luminance \(Self.describe(retry.meanLuminance))")
-            if (retry.meanLuminance ?? 0) > (photo.meanLuminance ?? 0) {
-                photo = retry
-            }
-        }
-
-        let darkFrameDetected = policy.isDark(meanLuminance: photo.meanLuminance)
-        if darkFrameDetected {
-            Log.capture.warning(
-                "Capture still looks dark after \(currentAttempt) attempt(s); saving best available image"
-            )
-        }
+        let outcome = try await sequence.run()
 
         let result = CaptureResult(
-            jpegData: photo.jpegData,
+            jpegData: outcome.frame.jpegData,
             cameraInfo: CameraInfo(
                 deviceName: deviceName,
                 position: devicePosition,
                 uniqueID: selectedCameraUniqueID
             ),
-            attemptCount: currentAttempt,
-            meanLuminance: photo.meanLuminance,
-            darkFrameDetected: darkFrameDetected,
-            exposureWarmUpMs: stabilizationMs
+            attemptCount: outcome.attemptCount,
+            meanLuminance: outcome.frame.meanLuminance,
+            darkFrameDetected: outcome.darkFrameDetected,
+            exposureWarmUpMs: outcome.stabilizationMs
         )
 
         // Tear down: remove inputs/outputs before stopping to avoid
@@ -357,7 +310,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
         return result
     }
 
-    private func capturePhoto(with output: AVCapturePhotoOutput) async throws -> ProcessedPhoto {
+    private func capturePhoto(with output: AVCapturePhotoOutput) async throws -> CapturedFrame {
         try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             let settings = AVCapturePhotoSettings()
@@ -410,7 +363,7 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
 
     // MARK: - Image Processing
 
-    private func processImage(data: Data) throws -> ProcessedPhoto {
+    private func processImage(data: Data) throws -> CapturedFrame {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw CaptureError.captureFailed("Failed to decode captured image data")
@@ -482,28 +435,10 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
             throw CaptureError.captureFailed("Failed to finalize JPEG encoding")
         }
 
-        return ProcessedPhoto(jpegData: mutableData as Data, meanLuminance: meanLuminance)
+        return CapturedFrame(jpegData: mutableData as Data, meanLuminance: meanLuminance)
     }
 
-    // MARK: - Quality Helpers
-
-    /// Effective stabilization delay: the configured warm-up, but never less
-    /// than the baseline delay the app has always applied.
-    private static func stabilizationMilliseconds(for quality: CaptureQuality) -> Int {
-        max(baselineStabilizationMilliseconds, quality.exposureWarmUpMilliseconds)
-    }
-
-    /// The video output is only useful when frames must keep flowing, either
-    /// for a warm-up longer than the baseline or for center-weighted metering.
-    private static func shouldPrimePipeline(for quality: CaptureQuality) -> Bool {
-        quality.centerMeteringEnabled
-            || quality.exposureWarmUpMilliseconds > baselineStabilizationMilliseconds
-    }
-
-    private static func describe(_ meanLuminance: Double?) -> String {
-        guard let meanLuminance else { return "unknown" }
-        return String(format: "%.3f", meanLuminance)
-    }
+    // MARK: - Exposure Metering
 
     /// Configure center-weighted exposure metering.
     /// Sets exposurePointOfInterest to the frame center (0.5, 0.5) and
