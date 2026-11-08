@@ -69,6 +69,10 @@ struct AppConfig: Sendable {
         /// considered a dark frame. 0 effectively disables the brightness check.
         var darkFrameThreshold: Double
 
+        /// Upper bound for `exposureWarmUpMilliseconds`; keeps a mistyped value
+        /// from holding the camera open for an unreasonable time.
+        static let maxExposureWarmUpMilliseconds = 10_000
+
         static let `default` = CaptureConfig(
             silent: true,
             debounceSeconds: 3,
@@ -129,7 +133,15 @@ struct AppConfig: Sendable {
             config.output.format = "jpg"
         }
 
-        // jpegQuality clamped to 0.0...1.0
+        // jpegQuality must be finite, then clamped to 0.0...1.0
+        if !config.output.jpegQuality.isFinite {
+            Log.config.warning(
+                "output.jpegQuality is not a finite number; setting to "
+                    + "\(AppConfig.OutputConfig.default.jpegQuality)"
+            )
+            config.output.jpegQuality = AppConfig.OutputConfig.default.jpegQuality
+        }
+
         if config.output.jpegQuality < 0.0 || config.output.jpegQuality > 1.0 {
             let clamped = min(max(config.output.jpegQuality, 0.0), 1.0)
             Log.config.warning("output.jpegQuality \(config.output.jpegQuality) out of range; clamped to \(clamped)")
@@ -154,7 +166,21 @@ struct AppConfig: Sendable {
             config.capture.exposureWarmUpMilliseconds = 0
         }
 
-        // darkFrameThreshold within 0.0...1.0
+        let maxWarmUp = AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+        if config.capture.exposureWarmUpMilliseconds > maxWarmUp {
+            Log.config.warning("capture.exposureWarmUpMilliseconds \(config.capture.exposureWarmUpMilliseconds) exceeds \(maxWarmUp); clamping to \(maxWarmUp)")
+            config.capture.exposureWarmUpMilliseconds = maxWarmUp
+        }
+
+        // darkFrameThreshold must be finite, then clamped to 0.0...1.0
+        if !config.capture.darkFrameThreshold.isFinite {
+            Log.config.warning(
+                "capture.darkFrameThreshold is not a finite number; setting to "
+                    + "\(AppConfig.CaptureConfig.default.darkFrameThreshold)"
+            )
+            config.capture.darkFrameThreshold = AppConfig.CaptureConfig.default.darkFrameThreshold
+        }
+
         if config.capture.darkFrameThreshold < 0.0 || config.capture.darkFrameThreshold > 1.0 {
             let clamped = min(max(config.capture.darkFrameThreshold, 0.0), 1.0)
             Log.config.warning("capture.darkFrameThreshold \(config.capture.darkFrameThreshold) out of range; clamped to \(clamped)")

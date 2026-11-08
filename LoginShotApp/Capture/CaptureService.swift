@@ -251,6 +251,14 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
             Self.configureCenterExposure(device: device)
         }
 
+        let output = AVCapturePhotoOutput()
+        guard session.canAddOutput(output) else {
+            throw CaptureError.captureFailed("Cannot add photo output to capture session")
+        }
+        session.addOutput(output)
+
+        // Optional priming output goes in after the required photo output, so a
+        // camera that cannot run both does not block the capture.
         if CaptureSequence.shouldPrimePipeline(for: captureQuality) {
             let videoOutput = AVCaptureVideoDataOutput()
             videoOutput.alwaysDiscardsLateVideoFrames = true
@@ -265,18 +273,12 @@ private final class OneShotCapture: NSObject, AVCapturePhotoCaptureDelegate, AVC
             }
         }
 
-        let output = AVCapturePhotoOutput()
-        guard session.canAddOutput(output) else {
-            throw CaptureError.captureFailed("Cannot add photo output to capture session")
-        }
-        session.addOutput(output)
-
         // Start session, then run the shared warm-up / capture / retry sequence.
         session.startRunning()
 
         let sequence = CaptureSequence(
             quality: captureQuality,
-            isSessionRunning: { session.isRunning },
+            isSessionRunning: { session.isRunning && output.connection(with: .video)?.isActive == true },
             capturePhoto: { try await self.capturePhoto(with: output) }
         )
         let outcome = try await sequence.run()

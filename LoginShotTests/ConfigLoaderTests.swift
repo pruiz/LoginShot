@@ -291,4 +291,68 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.capture.darkFrameRetryEnabled, defaults.darkFrameRetryEnabled)
         XCTAssertEqual(config.capture.darkFrameThreshold, defaults.darkFrameThreshold, accuracy: 0.0001)
     }
+
+    func testOutOfRangeIntegerFallsBackToDefaultWithoutTrapping() throws {
+        let yaml = """
+        capture:
+          exposureWarmUpMilliseconds: 100000000000000000000.0
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(
+            config.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.default.exposureWarmUpMilliseconds
+        )
+    }
+
+    func testNonFiniteIntegerFallsBackToDefault() throws {
+        let yaml = """
+        capture:
+          exposureWarmUpMilliseconds: .nan
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml)
+
+        XCTAssertEqual(
+            config.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.default.exposureWarmUpMilliseconds
+        )
+    }
+
+    func testNonFiniteNumbersAreSanitizedDuringValidation() throws {
+        let yaml = """
+        output:
+          jpegQuality: .nan
+        capture:
+          darkFrameThreshold: .inf
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml).validated()
+
+        XCTAssertEqual(
+            config.output.jpegQuality,
+            AppConfig.OutputConfig.default.jpegQuality,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            config.capture.darkFrameThreshold,
+            AppConfig.CaptureConfig.default.darkFrameThreshold,
+            accuracy: 0.0001
+        )
+    }
+
+    func testExcessiveWarmUpIsClampedDuringValidation() throws {
+        let yaml = """
+        capture:
+          exposureWarmUpMilliseconds: 20000
+        """
+
+        let config = try ConfigLoader.parse(yaml: yaml).validated()
+
+        XCTAssertEqual(
+            config.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+        )
+    }
 }

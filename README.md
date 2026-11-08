@@ -182,7 +182,8 @@ capture:
 
   # Milliseconds to run the capture pipeline before taking the still photo,
   # so auto-exposure and auto-white-balance can settle.
-  # Values below 500 are treated as 500 (the built-in baseline delay).
+  # Values below 500 are treated as 500 (the built-in baseline delay);
+  # values above 10000 are clamped to 10000.
   exposureWarmUpMilliseconds: 2000
 
   # Meter exposure from the center of the frame, where the subject is.
@@ -214,7 +215,7 @@ If `watermark.format` is empty/invalid, LoginShot falls back to `yyyy-MM-dd HH:m
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `capture.exposureWarmUpMilliseconds` | Integer | `2000` | Milliseconds to run the capture pipeline before taking the still photo. The effective delay is never below the 500 ms baseline used by earlier versions, so `0` means "baseline only". |
+| `capture.exposureWarmUpMilliseconds` | Integer | `2000` | Milliseconds to run the capture pipeline before taking the still photo. The effective delay is never below the 500 ms baseline used by earlier versions, so `0` means "baseline only". Values above `10000` are clamped to 10 s. |
 | `capture.centerMeteringEnabled` | Boolean | `true` | Sets `exposurePointOfInterest` to the frame center (`0.5, 0.5`) and continuous auto-exposure when the camera supports it. Unsupported cameras fall back to default metering. |
 | `capture.darkFrameRetryEnabled` | Boolean | `true` | Takes one additional photo (after 1.5 s) when the first photo is nearly black, and keeps the brighter of the two. |
 | `capture.darkFrameThreshold` | Number (0.0–1.0) | `0.03` | Mean luminance below which a photo counts as a dark frame. Lower it if legitimately dim rooms trigger retries; set `0` to disable the brightness check. |

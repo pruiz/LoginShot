@@ -134,6 +134,35 @@ final class ConfigWriterTests: XCTestCase {
         XCTAssertTrue(content.contains("darkFrameThreshold: 0.0"))
     }
 
+    func testWriteConfigPreservesTinyThresholdExactly() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.capture.darkFrameThreshold = 4e-16
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        XCTAssertTrue(
+            content.contains("darkFrameThreshold: 0.0000000000000004"),
+            "Exponent notation should be expanded to plain decimals"
+        )
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.capture.darkFrameThreshold, 4e-16)
+    }
+
+    func testWriteConfigExpandsExponentSizedQuality() throws {
+        let path = (tempDir as NSString).appendingPathComponent("config.yml")
+        var config = AppConfig.default
+        config.output.jpegQuality = 1e-05
+
+        _ = try ConfigWriter.writeConfig(config, to: path)
+
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        XCTAssertTrue(content.contains("jpegQuality: 0.00001"))
+        let parsed = try ConfigLoader.parse(yaml: content)
+        XCTAssertEqual(parsed.output.jpegQuality, 1e-05)
+    }
+
     func testWriteConfigEscapesQuotedPaths() throws {
         let path = (tempDir as NSString).appendingPathComponent("config.yml")
         var config = AppConfig.default

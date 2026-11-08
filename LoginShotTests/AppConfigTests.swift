@@ -162,6 +162,64 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(validated.capture.exposureWarmUpMilliseconds, 1500)
     }
 
+    func testValidationClampsExposureWarmUpAboveMaximum() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = 20_000
+
+        let validated = config.validated()
+
+        XCTAssertEqual(
+            validated.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+        )
+    }
+
+    func testValidationKeepsExposureWarmUpAtMaximum() {
+        var config = AppConfig.default
+        config.capture.exposureWarmUpMilliseconds = AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+
+        let validated = config.validated()
+
+        XCTAssertEqual(
+            validated.capture.exposureWarmUpMilliseconds,
+            AppConfig.CaptureConfig.maxExposureWarmUpMilliseconds
+        )
+    }
+
+    // MARK: - Validation: non-finite numbers
+
+    func testValidationReplacesNonFiniteJpegQuality() {
+        for invalid in [Double.nan, Double.infinity, -Double.infinity] {
+            var config = AppConfig.default
+            config.output.jpegQuality = invalid
+
+            let validated = config.validated()
+
+            XCTAssertEqual(
+                validated.output.jpegQuality,
+                AppConfig.OutputConfig.default.jpegQuality,
+                accuracy: 0.0001,
+                "Quality \(invalid) should fall back to the default"
+            )
+        }
+    }
+
+    func testValidationReplacesNonFiniteDarkFrameThreshold() {
+        for invalid in [Double.nan, Double.infinity, -Double.infinity] {
+            var config = AppConfig.default
+            config.capture.darkFrameThreshold = invalid
+
+            let validated = config.validated()
+
+            XCTAssertEqual(
+                validated.capture.darkFrameThreshold,
+                AppConfig.CaptureConfig.default.darkFrameThreshold,
+                accuracy: 0.0001,
+                "Threshold \(invalid) should fall back to the default"
+            )
+        }
+    }
+
     // MARK: - Validation: dark frame threshold
 
     func testValidationClampsDarkFrameThresholdAboveOne() {

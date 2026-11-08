@@ -205,14 +205,23 @@ enum ConfigLoader {
         return defaultValue
     }
 
-    /// Extract an Int from YAML value, handling Double→Int coercion.
+    /// Extract an Int from YAML value, handling Double→Int coercion without
+    /// trapping on non-finite or out-of-range numbers.
     /// YAML parsers may return Double for values like `1280.0` instead of `1280`.
     private static func extractInt(_ value: Any?, default defaultValue: Int) -> Int {
         if let intValue = value as? Int {
             return intValue
         }
         if let doubleValue = value as? Double {
-            return Int(doubleValue)
+            guard doubleValue.isFinite else {
+                Log.config.warning("Expected an integer but found \(doubleValue); using default \(defaultValue)")
+                return defaultValue
+            }
+            guard let intValue = Int(exactly: doubleValue.rounded(.towardZero)) else {
+                Log.config.warning("Integer \(doubleValue) is out of range; using default \(defaultValue)")
+                return defaultValue
+            }
+            return intValue
         }
         return defaultValue
     }

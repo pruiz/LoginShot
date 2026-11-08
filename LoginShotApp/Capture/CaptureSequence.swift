@@ -87,6 +87,21 @@ struct CaptureSequence {
                     + "retrying in \(Self.darkFrameRetryDelayMilliseconds)ms"
             )
             try await sleep(Self.darkFrameRetryDelayMilliseconds)
+
+            // Requesting another photo from a stopped session can raise an
+            // Objective-C exception, so recheck the camera before retrying.
+            guard isSessionRunning() else {
+                Log.capture.warning(
+                    "Capture session stopped before the dark-frame retry; keeping the first photo"
+                )
+                return Self.result(
+                    frame: frame,
+                    attemptCount: attemptCount,
+                    policy: policy,
+                    stabilizationMs: stabilizationMs
+                )
+            }
+
             attemptCount += 1
 
             do {
@@ -103,6 +118,21 @@ struct CaptureSequence {
             }
         }
 
+        return Self.result(
+            frame: frame,
+            attemptCount: attemptCount,
+            policy: policy,
+            stabilizationMs: stabilizationMs
+        )
+    }
+
+    /// Assemble the outcome and log a still-dark result.
+    private static func result(
+        frame: CapturedFrame,
+        attemptCount: Int,
+        policy: DarkFramePolicy,
+        stabilizationMs: Int
+    ) -> CaptureSequenceResult {
         let darkFrameDetected = policy.isDark(meanLuminance: frame.meanLuminance)
         if darkFrameDetected {
             Log.capture.warning(

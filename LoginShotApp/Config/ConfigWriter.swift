@@ -106,7 +106,8 @@ enum ConfigWriter {
 
           # Milliseconds to run the capture pipeline before taking the still
           # photo, so auto-exposure and auto-white-balance can settle.
-          # Values below 500 are treated as 500 (the built-in baseline delay).
+          # Values below 500 are treated as 500 (the built-in baseline delay);
+          # values above 10000 are clamped to 10000.
           exposureWarmUpMilliseconds: 2000
 
           # Meter exposure from the center of the frame, where the subject is.
@@ -198,17 +199,49 @@ enum ConfigWriter {
         return yamlQuoted(value)
     }
 
-    /// Format a Double for YAML without rounding away small values and without
-    /// locale-specific separators or exponent notation.
+    /// Format a Double for YAML without rounding and without locale-specific
+    /// separators. Uses the shortest round-trip representation and expands any
+    /// exponent notation into plain decimals.
     private static func yamlNumber(_ value: Double) -> String {
-        var text = String(format: "%.15f", value)
-        while text.hasSuffix("0") && text.contains(".") {
-            text.removeLast()
+        guard value.isFinite else { return "0.0" }
+
+        let text = value.description
+        guard let exponentIndex = text.firstIndex(where: { $0 == "e" || $0 == "E" }) else {
+            return text.contains(".") ? text : text + ".0"
         }
-        if text.hasSuffix(".") {
-            text += "0"
+
+        let mantissa = String(text[..<exponentIndex])
+        let exponent = Int(text[text.index(after: exponentIndex)...]) ?? 0
+        return expand(mantissa: mantissa, exponent: exponent)
+    }
+
+    /// Turn a mantissa with an exponent into plain decimal notation.
+    private static func expand(mantissa: String, exponent: Int) -> String {
+        var digits = mantissa
+        var isNegative = false
+        if digits.hasPrefix("-") {
+            isNegative = true
+            digits.removeFirst()
         }
-        return text
+
+        let parts = digits.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+        let integerPart = String(parts.first ?? "0")
+        let fractionPart = parts.count > 1 ? String(parts[1]) : ""
+
+        var allDigits = integerPart + fractionPart
+        var decimalPosition = integerPart.count + exponent
+
+        if decimalPosition <= 0 {
+            allDigits = String(repeating: "0", count: -decimalPosition + 1) + allDigits
+            decimalPosition = 1
+        } else if decimalPosition > allDigits.count {
+            allDigits += String(repeating: "0", count: decimalPosition - allDigits.count)
+        }
+
+        let splitIndex = allDigits.index(allDigits.startIndex, offsetBy: decimalPosition)
+        let fraction = allDigits[splitIndex...]
+        let number = String(allDigits[..<splitIndex]) + "." + (fraction.isEmpty ? "0" : String(fraction))
+        return isNegative ? "-" + number : number
     }
 
     private static func yamlQuoted(_ value: String) -> String {

@@ -107,6 +107,27 @@ final class CaptureSequenceTests: XCTestCase {
         XCTAssertTrue(result.darkFrameDetected)
     }
 
+    func testSessionStoppingDuringRetryDelayKeepsFirstPhoto() async throws {
+        let script = ScriptedCapture(photos: [
+            .success(frame(0x01, luminance: 0.01)),
+            .success(frame(0x02, luminance: 0.4))
+        ])
+        script.onSleep = { milliseconds in
+            if milliseconds == 1500 {
+                script.sessionRunning = false
+            }
+        }
+        let sequence = script.makeSequence(quality: makeQuality())
+
+        let result = try await sequence.run()
+
+        XCTAssertEqual(script.photoCallCount, 1, "No photo should be requested from a stopped session")
+        XCTAssertEqual(script.sleeps, [500, 1500])
+        XCTAssertEqual(result.frame.jpegData, Data([0x01]))
+        XCTAssertEqual(result.attemptCount, 1)
+        XCTAssertTrue(result.darkFrameDetected)
+    }
+
     func testFailedFirstPhotoThrows() async throws {
         let script = ScriptedCapture(photos: [.failure(CaptureError.captureFailed("first boom"))])
         let sequence = script.makeSequence(quality: makeQuality())
@@ -188,6 +209,7 @@ private final class ScriptedCapture {
     var sessionRunning = true
     var photoCallCount = 0
     var photos: [Result<CapturedFrame, Error>]
+    var onSleep: ((Int) -> Void)?
 
     init(photos: [Result<CapturedFrame, Error>]) {
         self.photos = photos
@@ -197,7 +219,10 @@ private final class ScriptedCapture {
         CaptureSequence(
             quality: quality,
             isSessionRunning: { self.sessionRunning },
-            sleep: { self.sleeps.append($0) },
+            sleep: { milliseconds in
+                self.sleeps.append(milliseconds)
+                self.onSleep?(milliseconds)
+            },
             capturePhoto: {
                 let index = self.photoCallCount
                 self.photoCallCount += 1
