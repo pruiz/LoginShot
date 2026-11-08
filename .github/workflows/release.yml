@@ -91,8 +91,14 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP_NAME" "$CHECKSUM_NAME" --clobber
           else
+            NOTES_FILE="release-notes.md"
+            printf '%s\n\n%s\n' \
+              "Unsigned macOS build for development/testing." \
+              "This artifact is not code-signed or notarized." > "$NOTES_FILE"
+
             gh release create "$TAG" "$ZIP_NAME" "$CHECKSUM_NAME" \
               --title "$TAG" \
-              --notes "Unsigned macOS build for development/testing.\n\nThis artifact is not code-signed or notarized." \
+              --notes-file "$NOTES_FILE" \
+              --generate-notes \
               --target "$GITHUB_SHA"
           fi
